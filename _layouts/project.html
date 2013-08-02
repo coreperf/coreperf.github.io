@@ -1,0 +1,14 @@
+---
+layout: default
+---
+{% if page.project_github_url %}
+  {% if page.project_name %}
+    <a id="forkme_banner" href={{ page.project_github_url }}>View {{ page.project_name }} on GitHub</a>
+  {% else %}
+    <a id="forkme_banner" href={{ page.project_github_url }}>View on GitHub</a>
+  {% endif %}
+{% endif %}
+
+<h2>{{ page.project_name }}</h2>
+
+{{ content }}

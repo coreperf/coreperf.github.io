@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>{{ page.title }}</title>
+        <meta name="viewport" content="width=device-width">
+
+        <!-- syntax highlighting CSS -->
+        <link rel="stylesheet" href="/css/syntax.css">
+
+        <!-- Custom CSS -->
+        <link rel="stylesheet" href="/css/main.css">
+
+    </head>
+    <body>
+
+      <div id="header_wrap" class="outer">
+        <header class="inner">
+        {% if page.github_banner %}
+          <a id="forkme_banner" href="">View on GitHub</a>
+        {% endif %}
+        <div>
+          <a style="margin-right:10px" href="/"><span id="project_title">{{ site.name }}</span></a>
+          <span id="project_tagline">{{ site.tagline }}</span>
+        </div>
+        <a class="menu_title" href="/">Services</a>
+        <a class="menu_title" href="/projects/">Projects</a>
+        <a class="menu_title" href="/blog.html">Blog</a>
+        </header>
+      </div>
+
+      <div id="main_content_wrap" class="outer">
+        <section id="main_content" class="inner">
+        {{ content }}
+        </section>
+      </div>
+
+    </body>
+</html>
