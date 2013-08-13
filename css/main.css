@@ -79,29 +79,31 @@ h1 {
 }
 
 h2 {
-  padding-bottom: 10px;
   font-size: 32px;
+  padding-bottom: 10px;
   background: url('/resources/images/bg_hr.png') repeat-x bottom;
 }
 
 h3 {
   font-size: 24px;
+  padding-bottom: 10px;
+  background: url('/resources/images/bg_hr.png') repeat-x bottom;
 }
 
 h4 {
-  font-size: 21px;
-}
-
-h5 {
   font-size: 18px;
 }
 
-h6 {
+h5 {
   font-size: 16px;
 }
 
+h6 {
+  font-size: 14px;
+}
+
 p {
-  margin: 10px 0 15px 0;
+  margin: 10px 0 0 0;
 }
 
 footer p {
@@ -149,13 +151,35 @@ img {
   max-width: 739px;
   padding: 5px;
   margin: 10px 0 10px 0;
-  border: 1px solid #ebebeb;
+  border: 1px solid #abcdef;
 
   box-shadow: 0 0 5px #ebebeb;
   -webkit-box-shadow: 0 0 5px #ebebeb;
   -moz-box-shadow: 0 0 5px #ebebeb;
   -o-box-shadow: 0 0 5px #ebebeb;
   -ms-box-shadow: 0 0 5px #ebebeb;
+}
+
+.img_container {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+/*
+ * TODO: Is there a better way to have no border than removing the inherited
+ * properties from img?
+ */
+.img_no_border {
+  border: 0;
+  box-shadow: 0;
+  -webkit-box-shadow: 0;
+  -moz-box-shadow: 0;
+  -o-box-shadow: 0;
+  -ms-box-shadow: 0;
+}
+
+.caption {
+  font-size: 14px;
 }
 
 pre, code {
@@ -200,17 +224,16 @@ blockquote {
 }
 
 ul, ol, dl {
+  margin-left: 20px;
   margin-bottom: 15px
 }
 
 ul li {
-  list-style: inside;
-  padding-left: 20px;
+  list-style: outside;
 }
 
 ol li {
-  list-style: decimal inside;
-  padding-left: 20px;
+  list-style: decimal outside;
 }
 
 dl dt {
@@ -235,7 +258,6 @@ hr {
 }
 
 table {
-  border: 1px solid #373737;
   margin-bottom: 20px;
   text-align: left;
  }
@@ -248,8 +270,7 @@ th {
  }
 
 td {
-  padding: 10px;
-  border: 1px solid #373737;
+  padding: 3px;
  }
 
 form {
@@ -258,7 +279,6 @@ form {
 }
 
 img {
-  width: 100%;
   max-width: 100%;
 }
 
@@ -272,7 +292,7 @@ Full-Width Styles
 
 .inner {
   position: relative;
-  max-width: 640px;
+  max-width: 800px;
   padding: 20px 10px;
   margin: 0 auto;
 }
@@ -384,6 +404,29 @@ Full-Width Styles
 
 
 /*******************************************************************************
+Graphs plotting (using flot.js: http://www.flotcharts.org/)
+*******************************************************************************/
+
+.graph {
+  width: 600px;
+  height: 400px;
+}
+
+.flot_choices {
+  margin-left: 10px;
+}
+
+.flot_choices li > div {
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.flot_choices li label {
+  margin-left: 3px;
+}
+
+
+/*******************************************************************************
 Small Device Styles
 *******************************************************************************/
 
@@ -431,11 +474,20 @@ Small Device Styles
 
   code, pre {
     min-width: 320px;
-    max-width: 480px;
+    max-width: 360px;
     font-size: 11px;
   }
 
+  img {
+  max-width: 100%;
+  }
+
+  .graph {
+    width: 330px;
+    height: 350px;
+  }
 }
+
 /*******************************************************************************
 Projects section
 *******************************************************************************/
@@ -445,3 +497,5 @@ Projects section
   font-size: 25px;
   font-weight: 700;
 }
+
+
