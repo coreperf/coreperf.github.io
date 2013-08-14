@@ -404,25 +404,32 @@ The tables below show performance (`real` running time) for different input
 sizes, for
 
 the
-[fastest registered single threaded implementation][cpu_bench single threaded fastest]
-(V8) and a single-threaded Rejit-powered implementation.
+[fastest registered single-threaded implementation][cpu_bench single threaded fastest]
+(V8), a single-threaded Rejit-powered implementation, and the fastest
+single-threaded registered Python and Java 7 implementations.
 
-    input size                            V8      Rejit
-        50.000 (500KB)                0.034s     0.015s
-       500.000 (  5MB)                0.217s     0.130s
-     5.000.000 ( 50MB)                2.054s     1.246s
-    50.000.000 (500MB)       (out of memory)    14.624s
+    input size                 V8      Rejit     Python       Java
+        50.000 (500KB)     0.034s     0.015s     0.173s     0.233s
+       500.000 (  5MB)     0.217s     0.130s     1.357s     1.357s
+     5.000.000 ( 50MB)     2.054s     1.246s    13.595s    12.304s
+    50.000.000 (500MB)      (oom)    14.624s   140.286s      (oom)
+
+    (oom): out of memory
 
 the
 [second fastest registered single threaded implementation][cpu_bench multi threaded fastest]
-(Re2) and a multi-threaded Rejit-powered implementation. (A quick go at running
-the first listed implementation would raise failures.)
+(Re2) (a quick go at running the first listed implementation would raise
+failures), a multi-threaded Rejit-powered implementation, and the fastest
+multi-threaded registered Python and Java 7 implementations.
 
-    input size                           Re2      Rejit
-        50.000 (500KB)                0.022s     0.011s
-       500.000 (  5MB)                0.183s     0.087s
-     5.000.000 ( 50MB)                1.629s     0.971s
-    50.000.000 (500MB)               20.693s    11.594s
+    input size                Re2      Rejit     Python       Java
+        50.000 (500KB)     0.022s     0.011s     0.167s     0.196s
+       500.000 (  5MB)     0.183s     0.087s     0.897s     0.669s
+     5.000.000 ( 50MB)     1.629s     0.971s     8.882s     5.166s
+    50.000.000 (500MB)    20.693s    11.594s   (killed)      (oom)
+
+    (oom): out of memory
+    (killed): program stopped before finishing.
 
 See performance for various engines and languages for
 [single-thread][cpu_bench single threaded] and
