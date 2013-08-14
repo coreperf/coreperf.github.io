@@ -358,6 +358,8 @@ Results are reported for the following engines versions:
     Rejit commit: b29ea4af1a3ae86dcb25bf961bc716029430c9b1
     V8 version 3.20.9, commit: 455bb9c2ab8af080aa15e0fbf4838731f45241e8
     Re2 commit: aa957b5e3374
+    Python3 version 3.2.3
+    Java version 1.7.0_25
 
 The benchmarks below try to show the best performance achievable by different
 engines. <br />
