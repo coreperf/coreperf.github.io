@@ -1,6 +1,6 @@
 ---
 layout: project
-title: uop.re - Projects - Rejit
+title: CorePerf - Projects - Rejit
 project_name: Rejit
 project_github_url: https://github.com/coreperf/rejit
 ---
