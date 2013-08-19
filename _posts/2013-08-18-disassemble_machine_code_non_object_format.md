@@ -3,7 +3,7 @@ layout: post
 title:  "Disassembling machine code in non-object format"
 date:   2013-08-18
 author: Alexandre
-categories: udpate
+categories: technical
 ---
 
 A few weeks ago I wanted to check there were not too many aberrations in the
