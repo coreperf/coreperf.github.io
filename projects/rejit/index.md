@@ -373,26 +373,82 @@ possibility to use SIMD. In fact both V8 and Re2 use SIMD via the system
 
 #### Single threaded recursive grep through the Linux kernel sources
 
+`jrep` is a grep-like utility powered by Rejit.
+
+The commands used to benchmarks follow the form below.
 In both cases the grep program is run a first time without measurement to give
 the OS a chance to preload the files. Without this we would be benchmarking the
 time to access the files.
 
-    $ CMD='grep -R regexp linux-3.10.6/'; $CMD > /dev/null && time $CMD > /dev/null
-    real  0m0.622s
-    user  0m0.356s
-    sys   0m0.260s
+    $ REGEXP="re"; CMD="jrep -R $REGEXP /work/linux/linux-3.10.6 "; \
+    $CMD > /dev/null && time $CMD > /tmp/res
 
-`jrep` is a grep-like utility powered by Rejit.
+    $ REGEXP="re"; CMD="grep -R $REGEXP /work/linux/linux-3.10.6 "; \
+    $CMD > /dev/null && time $CMD > /dev/null
 
-    $ CMD='jrep -R regexp linux-3.10.6/'; $CMD > /dev/null && time $CMD > /dev/null
-    real  0m0.370s
-    user  0m0.101s
-    sys   0m0.263s
+For concision, the REGEXP variable is reminded only in the extended regular
+expression (ERE) format. (Grep uses BRE.)
 
-The `jrep` utility performs 1.68 times faster than gnu grep in this very real
-use-case!  The time spent in `sys` is equivalent, but Rejit spends 3 times less
-time in `user` code.
-<br />It is part of the sample programs in the rejit repository (see the
+<table style="width:100%; margin-top:20px;">
+  <tr>
+    <td>
+      <strong>GNU grep</strong>
+    </td>
+    <td>
+      <strong>jrep</strong>
+    </td>
+    <td>
+      <strong>Speedup</strong>
+      (time for grep / time for jrep)
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      <strong>Regexp</strong>: <code>regexp</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <pre style="width:80%"><code>real  0m0.611s
+user  0m0.346s
+sys   0m0.259s</code></pre>
+    </td>
+    <td>
+      <pre style="width:80%"><code>real  0m0.373s
+user  0m0.112s
+sys   0m0.257s</code></pre>
+    </td>
+    <td>
+      <span style="color:green">1.64</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      <strong>Regexp</strong>: <code>"(\s\+void.*\(\))|(union.*\{)"</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <pre style="width:80%"><code>real  0m1.702s
+user  0m1.422s
+sys   0m0.272s</code></pre>
+    </td>
+    <td>
+      <pre style="width:80%"><code>real  0m0.523s
+user  0m0.224s
+sys   0m0.293s</code></pre>
+    </td>
+    <td>
+      <span style="color:green">3.25</span>
+    </td>
+  </tr>
+</table>
+
+The `jrep` utility performs significantly faster than grep in this very real
+use-cases!  To see benchmark results and comments for a wider range of regular
+expressions, please see [this article][grep jrep benchs article].
+
+`jrep` is part of the sample programs in the rejit repository (see the
 [wiki][rejit wiki]).  It is of course far behind grep in terms of features, but
 supports searching for multi-lines patterns and has initial multithreading
 support.
@@ -879,3 +935,4 @@ or [email me][email alexandre].
   [cpu_bench multi threaded]: http://benchmarksgame.alioth.debian.org/u64q/benchmark.php?test=regexdna&lang=all&data=u64q
   [rejit_users]: https://groups.google.com/forum/#!forum/rejit-users
   [email alexandre]: mailto:alexandre@coreperf.com
+  [grep jrep benchs article]: /blog/
