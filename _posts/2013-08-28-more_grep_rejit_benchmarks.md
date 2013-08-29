@@ -160,7 +160,7 @@ sys   0m0.497s</code></pre>
   </td></tr>
   <tr>
     <td colspan="3">
-      <strong>Regexp</strong>: <code>"regexp|yoyo|unsigned|int|struct|union"</code>
+      <strong>Regexp</strong>: <code>"regexp|yoyo|unsigned|struct|union|static|void"</code>
     </td>
   </tr>
   <tr>
