@@ -208,7 +208,7 @@ sys   0m0.511s</code></pre>
   </td></tr>
   <tr>
     <td colspan="3">
-      <strong>Regexp</strong>: <code>"\s\+void.*\(\)"</code>
+      <strong>Regexp</strong>: <code>"\s+void.*\(\)"</code>
     </td>
   </tr>
   <tr>
@@ -237,7 +237,7 @@ sys   0m0.265s</code></pre>
   </td></tr>
   <tr>
     <td colspan="3">
-      <strong>Regexp</strong>: <code>"(\s\+void.*\(\))|(union.*\{)"</code>
+      <strong>Regexp</strong>: <code>"(\s+void.*\(\))|(union.*\{)"</code>
     </td>
   </tr>
   <tr>
@@ -257,7 +257,7 @@ sys   0m0.293s</code></pre>
   </tr>
   <tr>
     <td colspan="3">
-      <strong>Regexp</strong>: <code>"(\s\+void.*\(\))|(struct.*\{)"</code>
+      <strong>Regexp</strong>: <code>"(\s+void.*\(\))|(struct.*\{)"</code>
     </td>
   </tr>
   <tr>
