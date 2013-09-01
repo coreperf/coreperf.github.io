@@ -15,10 +15,10 @@ sources) for a wider range of regular expressions.
 
 The commands used to benchmarks follow the form:
 
-    $ REGEXP="re"; CMD="jrep -R $REGEXP /work/linux/linux-3.10.6 "; \
+    $ REGEXP="re"; CMD="jrep -R $REGEXP linux-3.10.6 "; \
     $CMD > /dev/null && time $CMD > /tmp/res
 
-    $ REGEXP="re"; CMD="grep -R $REGEXP /work/linux/linux-3.10.6 "; \
+    $ REGEXP="re"; CMD="grep -R $REGEXP linux-3.10.6 "; \
     $CMD > /dev/null && time $CMD > /dev/null
 
 For concision, the REGEXP variable is reminded only in the extended regular
