@@ -278,27 +278,13 @@ sys   0m0.438s</code></pre>
   <tr><td colspan="3">
     <p>
     Interesting difference with above!<br />
-    I think the performance gap comes from differences in frequencies for the
-    first or last letters in <code>union</code> and <code>struct</code>.
-    </p>
-    <p>
-    Rejit looks at the letters in order, and so is mostly affected by the
-    frequency for the first letter of the word. A higher frequency forces rejit to
-    exit the efficient part of the SIMD optimised loop more often.  Quick
-    statistics give <code>~3.9%</code> for <code>u</code>
-    against <code>~2.2%</code> for <code>s</code>.
-    </p>
-    <p>
-    If grep uses a Boyer-Moore like algorithm, it probably looks at the
-    location of the last letter of the word. Again the frequency is higher in
-    the second case:
-    <code>~3.7%</code> for <code>n</code> and <code>~5.4%</code> for
-    <code>t</code>.
-    </p>
-    <p>
-    The performance hit is much more important for Rejit. I haven't done any
-    profiling, but suppose that this is because it requires a bigger overhead
-    than grep to exit (and re-enter) its fast processing loop.
+    I initially thought that the the performance gap was caused differences in
+    frequencies for the first or last letters in <code>struct</code> and
+    <code>union</code>.
+    <br />Further testing seems to indicate that this is caused by the much
+    higher number of matches: 119183 agains 5484. Duplicating the first letter
+    to look for <code>sstruct</code> drops the number of matches to 0 and restores
+    performance.
     </p>
   </td></tr>
 </table>
