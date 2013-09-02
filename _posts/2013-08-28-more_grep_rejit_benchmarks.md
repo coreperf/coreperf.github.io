@@ -350,7 +350,7 @@ sys   0m0.270s</code></pre>
 
 The tests indicate that Rejit would benefit from some cleverer
 algorithms and jrep from better memory management, but globally it performs
-very well!
+very well. Grep's stability is impressive.
 
 <br />
 Updated on 02/09/2013:
