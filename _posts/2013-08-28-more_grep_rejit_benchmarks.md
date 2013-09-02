@@ -8,7 +8,7 @@ categories: [update,rejit]
 
 
 I realised that the [article introducing rejit][rejit article] contained only one benchmark
-comparing a rejit-powered grep-like utility to GNU grep.
+comparing rejit to GNU grep.
 <br />
 So below are shortly commented benchmark results (grepping through the Linux kernel
 sources) for a wider range of regular expressions.
@@ -28,6 +28,9 @@ Benchmarks were run with the engines versions below:
 
     GNU grep version 2.14, commit: 599f2b15bc152cdf19022c7803f9a5f336c25e65
     Rejit commit: 6cd1ca642783ac9968085682b1a82b6961ad9109
+
+Jrep is a grep-like utility, a simple wrapper around the rejit library,
+provided as a sample program in the repository.
 
 <hr>
 
@@ -282,9 +285,63 @@ sys   0m0.438s</code></pre>
     frequencies for the first or last letters in <code>struct</code> and
     <code>union</code>.
     <br />Further testing seems to indicate that this is caused by the much
-    higher number of matches: 119183 agains 5484. Duplicating the first letter
-    to look for <code>sstruct</code> drops the number of matches to 0 and restores
-    performance.
+    higher number of matches: 119183 against 5484 lines matching.
+    Duplicating the last letter to look for <code>structs</code> drops the
+    number of matches and restores performance.
+    </p>
+  </td></tr>
+  <tr>
+    <td colspan="3">
+      <strong>Regexp</strong>: <code>"struct"</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <pre style="width:80%"><code>real  0m1.075s
+user  0m0.769s
+sys   0m0.300s</code></pre>
+    </td>
+    <td>
+      <pre style="width:80%"><code>real 0m1.988s
+user  0m1.498s
+sys   0m0.478s</code></pre>
+    </td>
+    <td>
+      <span style="color:red">0.54</span>
+    </td>
+  </tr>
+  <tr><td colspan="3">
+    <p>
+    Let's benchmark again for a single word with many matches (1038237 lines
+    matching, 10x more). Grep still has a big advantage. For comparison,
+    testing with <code>int</code> (1013108 lines matching) gives equivalent
+    results.
+    </p>
+  </td></tr>
+  <tr>
+    <td colspan="3">
+      <strong>Regexp</strong>: <code>"structs"</code>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <pre style="width:80%"><code>real 0m0.813s
+user  0m0.533s
+sys   0m0.278s</code></pre>
+    </td>
+    <td>
+      <pre style="width:80%"><code>real 0m0.424s
+user  0m0.148s
+sys   0m0.270s</code></pre>
+    </td>
+    <td>
+      <span style="color:green">1.92</span>
+    </td>
+  </tr>
+  <tr><td colspan="3">
+    <p>
+    Now we have few matches (897 lines), but a word with a similar profile.
+    Jrep gains its performance back!
     </p>
   </td></tr>
 </table>
@@ -295,7 +352,9 @@ The tests indicate that Rejit would benefit from some cleverer
 algorithms and jrep from better memory management, but globally it performs
 very well!
 
-
-
+<br />
+Updated on 02/09/2013:
+* Updated comments for the <code>"(\s+void.*\(\))|(struct.*\{)"</code> benchmark.
+* Add benchmarks for <code>struct</code> and <code>structs</code>
 
 [rejit article]: /projects/rejit/
