@@ -291,8 +291,9 @@ sys   0m0.438s</code></pre>
 
 <hr>
 
-The long alternations show that Rejit would benefit from some cleverer
-algorithms, but globally it performs very well!
+The tests indicate that Rejit would benefit from some cleverer
+algorithms and jrep from better memory management, but globally it performs
+very well!
 
 
 
