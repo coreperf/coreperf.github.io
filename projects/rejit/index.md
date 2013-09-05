@@ -264,7 +264,7 @@ For example `.` is somehow easy to look for but would be a poor choice. It
 matches nearly every character!
 <br />On the other hand `abcd` is an excellent pattern. Assuming a text randomly
 composed of 30 different characters, there is about one chance
-in 30^4 to have a match at a particular offset, ie about 1 in 800KiB!
+in 30^4 to have a match at a particular offset, ie. about 1 in 800KiB!
 
 To chose a performant regexp, each elementary type of regular expression
 (characters, brackets, anchors, etc.) is assigned a weight indicating how good
@@ -281,12 +281,12 @@ executed first backward to look for the start of a match, and then forward to
 look for its end.
 
 The code required to match backward is very similar to the code matching forward.
-<br />Matching backward with submatches containing greed patterns (eg.
+<br />Matching backward with submatches containing greed patterns (e.g.
 `(a*)(a*)root`) may look like an issue.
 Although this is not implemented in Rejit, I believe it can easily be overcome:
 <br />
 When matching forward, the code updating the nodes of the automaton has to
-prefer paths favoring the greedy patterns occurring earlier in the regexp: it
+prefer paths favouring the greedy patterns occurring earlier in the regexp: it
 matches as many characters as possible for the earlier greedy patterns.
 When matching backward this preference must be preserved, but will be translated
 in matching as few characters as possible to greedy patterns occurring later in
@@ -319,7 +319,7 @@ most interesting and fun pieces of code generated. The code is a bit dry to
 include in this article, but you can have a look at the commented code - for
 example the
 [code generation for alternation of standard characters strings][SIMD loop example]
-(eg. `abcd|012345`).
+(e.g. `abcd|012345`).
 
 
 
@@ -341,7 +341,7 @@ corresponding to an elementary type of regexp).
 <br />This should be an interesting feature to work on. As detailed earlier I
 think the design should allow for these without too much hurdle.
 * It supports the ERE (extended regular expression) syntax, but lacks full
-support for bracket expressions (eg. `[:digit:]`)
+support for bracket expressions (e.g. `[:digit:]`)
 * It only supports ASCII characters, but not wide character types.
 
 
@@ -531,7 +531,7 @@ Rejit performing well for more common patterns.
         <strong>Regexp 1:</strong> <code>abcdefg</code>
         <p>
         Search for a simple concatenation of characters.
-        The text is randomly generated from charactres in the range <code>[b-z]</code>, so the
+        The text is randomly generated from characters in the range <code>[b-z]</code>, so the
         starting character <code>a</code> is <strong>not</strong> present in the text searched.
         </p>
         <p>
@@ -850,10 +850,10 @@ Rejit performing well for more common patterns.
         <p>
         Re2 spots the common prefix and uses the information to speed up the search,
         probably by interpreting it as <code>abcd(---|___)</code>.
-        Rejit and (apparently) V8 do not do that yet. Such an optimization would
+        Rejit and (apparently) V8 do not do that yet. Such an optimisation would
         enable performance similar to searching for the single common prefix.
-        <br />Rejit could highly benefit from a generalized version of this
-        optimization looking for common sub-regexp and applied to find a better
+        <br />Rejit could highly benefit from a generalised version of this
+        optimisation looking for common sub-regexp and applied to find a better
         dominant sub-regexp.
         </p>
       </div>
