@@ -86,7 +86,8 @@ this article.
   Partial matching the regular expression `[0a]` in the string `0128abcd` yields
   two matches: `0`, and `a`.
   <br />Partial matching can be sub-divided into 2 questions:
-  <ol><ol>
+
+  <ol>
     <li> Existence: is there a partial match of the regexp in the text?</li>
     <li> Location: Is there a partial match and, if so, where is it?
          <br />
@@ -94,7 +95,8 @@ this article.
          We are looking for the leftmost longest match. We must keep track of the
          boundaries of the match, and cannot exit as soon as any match is found.
     </li>
-  </ol></ol>
+  </ol>
+
   Note the meaning associated with 'partial matches'.
   Looking for a partial match of a regular expression in a text means searching
   for sub-strings of the text that match the full regular expression. It has
