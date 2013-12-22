@@ -5,171 +5,116 @@ project_name: Rejit
 project_github_url: https://github.com/coreperf/rejit
 ---
 
-### Introduction
+<h3 id="introduction">Introduction</h3>
 
-I started working on Rejit after having read Russ Cox's excellent
-[articles][Russ Cox articles].
-Reading these can help understand some technical parts of the article, but is
-not required.
-All you should need is to see how regular expressions can be represented by
-automata.
-
-<div class="img_container">
-<img src="resources/images/automaton_simple.png"
-alt="An automaton for the regular expression '(a0|a1)z'."
-class="img_no_border"/>
-<div class="caption">
+<p>I started working on Rejit after having read Russ Cox’s excellent <a href="http://swtch.com/~rsc/regexp/">articles</a>. Reading these can help understand some technical parts of the article, but is not required. All you should need is to see how regular expressions can be represented by automata.</p>
+<div class='img_container'>
+<img alt='An automaton for the regular expression &apos;(a0|a1)z&apos;.' class='img_no_border' src='resources/images/automaton_simple.png' />
+<div class='caption'>
 Example automaton for the regular expression `(a0|a1)z`.
 </div>
 </div>
-Although it should behave fairly well, Rejit is still a prototype.
-Development was done on my free time, so the effort went mostly into what I
-thought was fun!
+<p>Although it should behave fairly well, Rejit is still a prototype. Development was done on my free time, so the effort went mostly into what I thought was fun!</p>
 
-This article introduces a some technical information about Rejit, and then
-presents benchmarks results.
-
-<div style="margin:10px 0 0 40px">
+<p>This article introduces a some technical information about Rejit, and then presents benchmarks results.</p>
+<div style='margin:10px 0 0 40px'>
   <ol>
-  <li> <a href="#mechanisms">Mechanisms</a></li>
-    <ol style="margin-bottom:0">
-      <li style="list-style:lower-latin"> <a href="#matching_mechanism">Matching mechanism</a></li>
-      <li style="list-style:lower-latin"> <a href="#looking_for_partial_matches">Looking for partial matches</a></li>
-      <li style="list-style:lower-latin"> <a href="#fastforwarding_mechanism">Fast-forwarding mechanism</a></li>
-      <li style="list-style:lower-latin"> <a href="#jit_code">JIT code</a></li>
+  <li> <a href='#mechanisms'>Mechanisms</a></li>
+    <ol style='margin-bottom:0'>
+      <li style='list-style:lower-latin'> <a href='#matching_mechanism'>Matching mechanism</a></li>
+      <li style='list-style:lower-latin'> <a href='#looking_for_partial_matches'>Looking for partial matches</a></li>
+      <li style='list-style:lower-latin'> <a href='#fastforwarding_mechanism'>Fast-forwarding mechanism</a></li>
+      <li style='list-style:lower-latin'> <a href='#jit_code'>JIT code</a></li>
     </ol>
-  <li> <a href="#features">Features</a></li>
-  <li> <a href="#benchmarks">Benchmarks</a></li>
-    <ol style="margin-bottom:0">
-      <li style="list-style:lower-latin"> <a href="#single_threaded_recursive_grep_through_the_linux_kernel_sources">Single threaded recursive grep through the Linux kernel sources</a></li>
-      <li style="list-style:lower-latin"> <a href="#dna_matching_benchmark">DNA matching benchmark</a></li>
-      <li style="list-style:lower-latin"> <a href="#rejit_benchmarks">Rejit benchmarks</a></li>
+  <li> <a href='#features'>Features</a></li>
+  <li> <a href='#benchmarks'>Benchmarks</a></li>
+    <ol style='margin-bottom:0'>
+      <li style='list-style:lower-latin'> <a href='#single_threaded_recursive_grep_through_the_linux_kernel_sources'>Single threaded recursive grep through the Linux kernel sources</a></li>
+      <li style='list-style:lower-latin'> <a href='#dna_matching_benchmark'>DNA matching benchmark</a></li>
+      <li style='list-style:lower-latin'> <a href='#rejit_benchmarks'>Rejit benchmarks</a></li>
     </ol>
-  <li> <a href="#future_work">Future work</a></li>
+  <li> <a href='#future_work'>Future work</a></li>
   </ol>
 </div>
+<h4 id="a_few_definitions">A few definitions</h4>
 
+<p>To avoid confusion later here are definitions for a few expressions used in this article.</p>
 
+<ul>
+<li>
+<p><strong>NFA</strong>: Nondeterministic finite automaton (<a href="http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton">Wikipedia</a>).</p>
+</li>
 
-#### A few definitions
+<li>
+<p><strong>Full matching</strong>: Testing if a regular expression matches a whole string. <br /> The regular expression <code>abc</code> full-matches the string <code>abc</code> (the match is - of course - <code>abc</code>). <br /> The regular expression <code>abc</code> does <strong>not</strong> full-match the string <code>0_abc_9</code>.</p>
+</li>
 
-To avoid confusion later here are definitions for a few expressions used in
-this article.
+<li>
+<p><strong>Partial matching</strong>: Testing if a regular expression matches a substring of the text. <br /> Partial matching the regular expression <code>[0a]</code> in the string <code>0128abcd</code> yields two matches: <code>0</code>, and <code>a</code>. <br />Partial matching can be sub-divided into 2 questions:</p>
+<ol>
+  <li> Existence: is there a partial match of the regexp in the text?</li>
+  <li> Location: Is there a partial match and, if so, where is it?
+       <br />
+       This is harder than the 'existence' question.
+       We are looking for the leftmost longest match. We must keep track of the
+       boundaries of the match, and cannot exit as soon as any match is found.
+  </li>
+</ol>
+<p>Note the meaning associated with ‘partial matches’. Looking for a partial match of a regular expression in a text means searching for sub-strings of the text that match the full regular expression. It has nothing to do with matching part of the regular expression.</p>
+</li>
+</ul>
 
-* **NFA**: Nondeterministic finite automaton ([Wikipedia][Wikipedia NFA]).
-* **Full matching**: Testing if a regular expression matches a whole string.
-  <br />
-  The regular expression `abc` full-matches the string `abc` (the match is - of
-  course - `abc`).
-  <br />
-  The regular expression `abc` does **not** full-match the string `0_abc_9`.
-* **Partial matching**: Testing if a regular expression matches a substring of
-  the text.
-  <br />
-  Partial matching the regular expression `[0a]` in the string `0128abcd` yields
-  two matches: `0`, and `a`.
-  <br />Partial matching can be sub-divided into 2 questions:
+<h3 id="mechanisms">Mechanisms</h3>
 
-  <ol>
-    <li> Existence: is there a partial match of the regexp in the text?</li>
-    <li> Location: Is there a partial match and, if so, where is it?
-         <br />
-         This is harder than the 'existence' question.
-         We are looking for the leftmost longest match. We must keep track of the
-         boundaries of the match, and cannot exit as soon as any match is found.
-    </li>
-  </ol>
+<p>The following paragraphs give a short description of Rejit’s two main mechanisms.</p>
 
-  Note the meaning associated with 'partial matches'.
-  Looking for a partial match of a regular expression in a text means searching
-  for sub-strings of the text that match the full regular expression. It has
-  nothing to do with matching part of the regular expression.
+<ol>
+<li>The code generated for the <strong>matching</strong> mechanism executes a (non-backtracking) NFA simulation to check if a regular expression matches a sequence of characters. Full matching only uses this mechanism.</li>
 
+<li>The code generated for <strong>fast-forwarding</strong> speeds up search for partial matches by efficiently searching for dominating sub-regexps.</li>
+</ol>
 
+<h4 id="matching_mechanism">Matching mechanism</h4>
 
+<p>Rejit generates code able to execute an NFA simulation for the regexp considered.</p>
 
-### Mechanisms
+<p>The simulation allows the automaton to be in multiple states simultaneously. It executes either until no nodes are set and there is no match, or until we reach the end of the string, at which point there is a match iff an exit node is set.</p>
 
-The following paragraphs give a short description of Rejit's two main
-mechanisms.
-
-1. The code generated for the **matching** mechanism executes a (non-backtracking)
-NFA simulation to check if a regular expression matches a sequence of
-characters.  Full matching only uses this mechanism.
-2. The code generated for **fast-forwarding** speeds up search for partial matches by
-efficiently searching for dominating sub-regexps.
-
-
-
-#### Matching mechanism
-
-Rejit generates code able to execute an NFA simulation for the regexp considered.
-
-The simulation allows the automaton to be in multiple states simultaneously.  It
-executes either until no nodes are set and there is no match, or until we reach
-the end of the string, at which point there is a match iff an exit node is set.
-
-See the following diagram for an illustration, and Russ Cox's
-[article][Russ Cox article 1] for a more detailed explanation.
-<br />
-
-<div class="img_container">
-<img src="resources/images/automaton_simu_simple.png"
-alt="Automaton simulation for a full match."
-class="img_no_border"/>
-<div class="caption">
+<p>See the following diagram for an illustration, and Russ Cox’s <a href="http://swtch.com/~rsc/regexp/regexp1.html">article</a> for a more detailed explanation. <br /></p>
+<div class='img_container'>
+<img alt='Automaton simulation for a full match.' class='img_no_border' src='resources/images/automaton_simu_simple.png' />
+<div class='caption'>
 Automaton simulation for a full match.
-<br />The red pipe '<span style="color:red">|</span>' indicates the current position of the
+<br />The red pipe '<span style='color:red'>|</span>' indicates the current position of the
 algorithm in the string.
 </div>
 </div>
+<p>Full matching only use this mechanism. Execution results either in an early exit when there is no match, or goes through scanning until the end of the string.</p>
 
-Full matching only use this mechanism. Execution results either in an early
-exit when there is no match, or goes through scanning until the end of the
-string.
+<h4 id="looking_for_partial_matches">Looking for partial matches</h4>
 
+<p>Assuming we have a matching mechanism (for example the one described above), how should we search for partial matches? <br /> Executing the matching mechanism successively for each character of the text until a match is found is a trivial but very slow implementation.</p>
 
-#### Looking for partial matches
+<p>Considering that an automaton is used for matching, a better solution can be to execute the automaton simulation while setting the entry node of the automaton at every character of the text searched. When the execution reaches an exit node, a match is found. <br /> Finding the leftmost match can easily be implemented by using the offsets <code>start
+of match - start of string</code> to indicate the state of the nodes.</p>
 
-Assuming we have a matching mechanism (for example the one described above), how
-should we search for partial matches?
-<br />
-Executing the matching mechanism successively for each character of the text
-until a match is found is a trivial but very slow implementation.
-
-Considering that an automaton is used for matching, a better solution can be to
-execute the automaton simulation while setting the entry node of the automaton
-at every character of the text searched. When the execution reaches an exit
-node, a match is found.
-<br />
-Finding the leftmost match can easily be implemented by using the offsets `start
-of match - start of string` to indicate the state of the nodes.
-
-Below is a diagram illustrating the process to match the regular expression
-`a(ab|b)a` in the text `_aaba_` with this method.
-
-<div class="img_container">
-<img src="resources/images/automaton_simu_offsets.png"
-alt="Automaton simulation with nodes indexed by string offsets."
-class="img_no_border"/>
-<div class="caption">
+<p>Below is a diagram illustrating the process to match the regular expression <code>a(ab|b)a</code> in the text <code>_aaba_</code> with this method.</p>
+<div class='img_container'>
+<img alt='Automaton simulation with nodes indexed by string offsets.' class='img_no_border' src='resources/images/automaton_simu_offsets.png' />
+<div class='caption'>
 Automaton simulation with nodes indexed by string offsets.
-<br />The red pipe '<span style="color:red">|</span>' indicates the current position of the
+<br />The red pipe '<span style='color:red'>|</span>' indicates the current position of the
 algorithm in the string.
 </div>
 </div>
-
-The diagram above is probably more explicit, but here are general rules to find
-all leftmost longest matches using a one pass non-backtracking automaton
-simulation:
-
+<p>The diagram above is probably more explicit, but here are general rules to find all leftmost longest matches using a one pass non-backtracking automaton simulation:</p>
 <ul>
 <li> A node is either empty (unset), or contains an offset from the beginning of the
 string indicating where the match considered for this state started.</li>
 <li> When multiple transitions can set a state, the lowest offset (leftmost match)
 is preferred.</li>
 When an exit node is reached:
-<ul sytle="margin-bottom:0;">
+<ul sytle='margin-bottom:0;'>
   <li> A potential match is recorded (starting from the offset indicated in the
   exit node and finishing at the current string offset).</li>
   <li> It is possible that previously recorded potential matches start within the
@@ -182,199 +127,115 @@ When an exit node is reached:
 <li> All registered potential matches that start earlier than any node offset in
 the graph are certain to be matches.</li>
 </ul>
+<p>Rejit first used a similar mechanism. But even this can be painfully slow.</p>
 
-Rejit first used a similar mechanism. But even this can be painfully slow.
+<p>Consider for example the regular expression: <code>([complex]|(regexp)){2,7}abcdefgh(at|the|[e-nd]as well)</code> <br /> The automaton for this regular expression is relatively complex - it has many states and transitions. <br /> The initial sub-regexps (especially the repeated bracket <code>[complex]</code>) match easily and allow states to propagate through the nodes of the automaton.</p>
 
-Consider for example the regular expression: `([complex]|(regexp)){2,7}abcdefgh(at|the|[e-nd]as well)`
-<br />
-The automaton for this regular expression is relatively complex - it has
-many states and transitions.
-<br />
-The initial sub-regexps (especially the repeated bracket `[complex]`) match
-easily and allow states to propagate through the nodes of the automaton.
+<p>In a situation where the regexp matches rarely (as in most use-cases), the processing required to simulate the early nodes of the automaton is - most of the time - lost, and translates into decreased performance. <br /> Note that the issue applies to simpler (in terms of automaton complexity, not speed) regexps like <code>[aeiouy]{1,10}bcdfgh</code>.</p>
 
-In a situation where the regexp matches rarely (as in most use-cases), the
-processing required to simulate the early nodes of the automaton is - most of the
-time - lost, and translates into decreased performance.
-<br />
-Note that the issue applies to simpler (in terms of automaton complexity, not
-speed) regexps like `[aeiouy]{1,10}bcdfgh`.
+<p>Notice however the sub-regexp <code>abcdefgh</code> in the middle. It most likely won’t match very often, but any match for the full regexp <em>must</em> have a substring matching this particular sub-regexp. We can use it to significantly increase the matching speed.</p>
 
-Notice however the sub-regexp `abcdefgh` in the middle. It most likely won't
-match very often, but any match for the full regexp *must* have a substring
-matching this particular sub-regexp. We can use it to significantly increase the
-matching speed.
+<h4 id="fastforwarding_mechanism">Fast-forwarding mechanism</h4>
 
+<p>The fast-forwarding mechanism uses the idea of dominating sub-regexps to significantly speed up the code.</p>
 
+<p><strong>Pseudo-definition</strong>:</p>
 
+<pre><code>(&#39;a&#39; is a dominating sub-regexp of &#39;b&#39;)
+iff
+(&#39;b&#39; matches the string &#39;s&#39; in text =&gt; &#39;a&#39; matches a substring of &#39;s&#39;)</code></pre>
 
-#### Fast-forwarding mechanism
+<p>In the regexp introduced above, <code>abcdefgh</code> and <code>(at|the|[e-nd]as well)</code> are dominating sub-regexps.</p>
 
-The fast-forwarding mechanism uses the idea of dominating sub-regexps to
-significantly speed up the code.
+<p>Rejit choses what it thinks will be the easiest and fastest dominating sub-regexp to search for, and generates efficient specialised code (using SIMD if available). When this fast code finds a match, execution exits and continues in the ‘matching’ code, which searches backward and forward for the boundaries of a complete match.</p>
 
-**Pseudo-definition**:
+<p>In the benchmarks section you will find a a graph illustrating the speed-up provided by this mechanism for this regular expression. <br /> With this mechanism, the scanning speed for any regular expression can become close to the scanning speed for the chosen dominating sub-regexp.</p>
 
-    ('a' is a dominating sub-regexp of 'b')
-    iff
-    ('b' matches the string 's' in text => 'a' matches a substring of 's')
+<h5 id="choice_of_the_dominating_subregexp">Choice of the dominating sub-regexp</h5>
 
-In the regexp introduced above, `abcdefgh` and `(at|the|[e-nd]as well)` are
-dominating sub-regexps.
+<p>The choice of the dominating sub-regexp to use for fast-forwarding is critical for good performance.</p>
 
-Rejit choses what it thinks will be the easiest and fastest dominating
-sub-regexp to search for, and generates efficient specialised code (using SIMD
-if available). When this fast code finds a match, execution exits and continues
-in the 'matching' code, which searches backward and forward for the boundaries
-of a complete match.
+<p>We want a dominating sub-regexp that:</p>
 
-In the benchmarks section you will find a a graph illustrating the speed-up
-provided by this mechanism for this regular expression.
-<br />
-With this mechanism, the scanning speed for any regular expression can become
-close to the scanning speed for the chosen dominating sub-regexp.
+<ul>
+<li>is easy to look for, so we can generate efficient code for it.</li>
 
+<li>does not match often, so we don’t have to fall back to the matching mechanism to check for other parts of the regexp.</li>
+</ul>
 
-##### Choice of the dominating sub-regexp
-The choice of the dominating sub-regexp to use for fast-forwarding is critical
-for good performance.
+<p>For example <code>.</code> is somehow easy to look for but would be a poor choice. It matches nearly every character! <br />On the other hand <code>abcd</code> is an excellent pattern. Assuming a text randomly composed of 30 different characters, there is about one chance in 30^4 to have a match at a particular offset, ie. about 1 in 800KiB!</p>
 
-We want a dominating sub-regexp that:
+<p>To chose a performant regexp, each elementary type of regular expression (characters, brackets, anchors, etc.) is assigned a weight indicating how good a choice it is believed to be. After the regular expression has been parsed, Rejit traverses the parse tree and uses those weights to identify the fastest dominating sub-regexp it can use.</p>
 
-* is easy to look for, so we can generate efficient code for it.
-* does not match often, so we don't have to fall back to the matching mechanism
-to check for other parts of the regexp.
+<h5 id="backward_matching">Backward matching</h5>
 
-For example `.` is somehow easy to look for but would be a poor choice. It
-matches nearly every character!
-<br />On the other hand `abcd` is an excellent pattern. Assuming a text randomly
-composed of 30 different characters, there is about one chance
-in 30^4 to have a match at a particular offset, ie. about 1 in 800KiB!
+<p>After fast-forwarding has found a potential match, the automaton simulation is executed first backward to look for the start of a match, and then forward to look for its end.</p>
 
-To chose a performant regexp, each elementary type of regular expression
-(characters, brackets, anchors, etc.) is assigned a weight indicating how good
-a choice it is believed to be.  After the regular expression has been
-parsed, Rejit traverses the parse tree and uses those weights to identify the
-fastest dominating sub-regexp it can use.
+<p>The code required to match backward is very similar to the code matching forward. <br />Matching backward with submatches containing greed patterns (e.g. <code>(a*)(a*)root</code>) may look like an issue. Although this is not implemented in Rejit, I believe it can easily be overcome: <br /> When matching forward, the code updating the nodes of the automaton has to prefer paths favouring the greedy patterns occurring earlier in the regexp: it matches as many characters as possible for the earlier greedy patterns. When matching backward this preference must be preserved, but will be translated in matching as few characters as possible to greedy patterns occurring later in the regexp.</p>
 
+<h4 id="jit_code">JIT code</h4>
 
+<p>As a JIT compiler, Rejit generates native code tailored for each regular expression for all the mechanisms described.</p>
 
-##### Backward matching
+<p>SIMD is currently only used to accelerate code paths for fast-forwarding, but could be used in many more places. <br /> When available on x86_64 machines, Rejit uses SSE4.2 and the very convenient string instructions that help performance and strongly facilitate implementation, <code>pcmpistr[im]</code> (Packed Compare Implicit Length Strings, see <a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html">Intel’s developer manuals</a>) in particular. Earlier versions of SSE are not supported yet.</p>
 
-After fast-forwarding has found a potential match, the automaton simulation is
-executed first backward to look for the start of a match, and then forward to
-look for its end.
+<p>The generated code is currently not self-modifiable. Using self-modifiable code could allow changing the behaviour of the code at runtime depending on the text scanned. It would certainly be a lot of fun to implement! However I am not sure there would be many practical use-cases, and there is a lot of more important work to do before that.</p>
 
-The code required to match backward is very similar to the code matching forward.
-<br />Matching backward with submatches containing greed patterns (e.g.
-`(a*)(a*)root`) may look like an issue.
-Although this is not implemented in Rejit, I believe it can easily be overcome:
-<br />
-When matching forward, the code updating the nodes of the automaton has to
-prefer paths favouring the greedy patterns occurring earlier in the regexp: it
-matches as many characters as possible for the earlier greedy patterns.
-When matching backward this preference must be preserved, but will be translated
-in matching as few characters as possible to greedy patterns occurring later in
-the regexp.
+<p>The SIMD optimised loops for the fast-forward code are probably (currently) the most interesting and fun pieces of code generated. The code is a bit dry to include in this article, but you can have a look at the commented code - for example the <a href="https://github.com/arames/rejit/blob/master/src/x64/codegen-x64.cc#L1064">code generation for alternation of standard characters strings</a> (e.g. <code>abcd|012345</code>).</p>
 
+<h3 id="features">Features</h3>
 
+<p>Here are a few bullets detailing features that Rejit supports or is still lacking. There are I believe no technical obstacles to supporting the missing features. It just needs some more work!</p>
 
-#### JIT code
+<ul>
+<li>Rejit delivers high performance while being non-backtracking (like Re2). This is its main advantage.</li>
 
-As a JIT compiler, Rejit generates native code tailored for each regular
-expression for all the mechanisms described.
+<li>It only supports x86_64.</li>
+</ul>
 
-SIMD is currently only used to accelerate code paths for fast-forwarding, but
-could be used in many more places.
-<br />
-When available on x86\_64 machines, Rejit uses SSE4.2 and the very convenient
-string instructions that help performance and strongly facilitate
-implementation, `pcmpistr[im]` (Packed Compare Implicit Length Strings, see
-[Intel's developer manuals][Intel manuals]) in particular.  Earlier versions of
-SSE are not supported yet.
+<p><br />Rejit should not be very hard to port to other architectures. The build</p>
 
-The generated code is currently not self-modifiable. Using self-modifiable code
-could allow changing the behaviour of the code at runtime depending on the text
-scanned. It would certainly be a lot of fun to implement! However I am not
-sure there would be many practical use-cases, and there is a lot of more
-important work to do before that.
+<p>system and architecture abstraction mechanisms are similar to those used in V8. The behaviour of the different assembly stubs is rather simple (usually corresponding to an elementary type of regexp).</p>
 
-The SIMD optimised loops for the fast-forward code are probably (currently) the
-most interesting and fun pieces of code generated. The code is a bit dry to
-include in this article, but you can have a look at the commented code - for
-example the
-[code generation for alternation of standard characters strings][SIMD loop example]
-(e.g. `abcd|012345`).
+<ul>
+<li>Case insensitive search is not supported.</li>
 
+<li>Submatches and backreferences are not supported.</li>
+</ul>
 
+<p><br />This should be an interesting feature to work on. As detailed earlier I</p>
 
-### Features
+<p>think the design should allow for these without too much hurdle. * It supports the ERE (extended regular expression) syntax, but lacks full support for bracket expressions (e.g. <code>[:digit:]</code>) * It only supports ASCII characters, but not wide character types.</p>
 
-Here are a few bullets detailing features that Rejit supports or is still
-lacking. There are I believe no technical obstacles to supporting the missing
-features. It just needs some more work!
+<h3 id="benchmarks">Benchmarks</h3>
 
-* Rejit delivers high performance while being non-backtracking (like Re2).
-This is its main advantage.
-* It only supports x86\_64.
-<br />Rejit should not be very hard to port to other architectures. The build
-system and architecture abstraction mechanisms are similar to those used in V8.
-The behaviour of the different assembly stubs is rather simple (usually
-corresponding to an elementary type of regexp).
-* Case insensitive search is not supported.
-* Submatches and backreferences are not supported.
-<br />This should be an interesting feature to work on. As detailed earlier I
-think the design should allow for these without too much hurdle.
-* It supports the ERE (extended regular expression) syntax, but lacks full
-support for bracket expressions (e.g. `[:digit:]`)
-* It only supports ASCII characters, but not wide character types.
+<p>The results below were produced on a machine with a quad-core Intel Core i5-2400 CPU @ 3.10GHz with 4GiB RAM on Fedora 17 (3.8.13-100.fc17.x86_64). It supports SSE4.2.</p>
 
+<p>Results are reported for the following engines versions:</p>
 
+<pre><code>GNU grep version 2.14, commit: 599f2b15bc152cdf19022c7803f9a5f336c25e65
+Rejit commit: 6cd1ca642783ac9968085682b1a82b6961ad9109
+V8 version 3.20.9, commit: 455bb9c2ab8af080aa15e0fbf4838731f45241e8
+Re2 commit: aa957b5e3374
+Python3 version 3.2.3
+Java version 1.7.0_25</code></pre>
 
-### Benchmarks
+<p>The benchmarks below try to show the best performance achievable by different engines. <br /> With this goal, comparing other engines to Rejit - which uses SSE4.2 - is fair. Grep, Re2, and V8 have been recompiled on the tested system, and have the possibility to use SIMD. In fact both V8 and Re2 use SIMD via the system <code>memchr()</code> implementation (see Rejit benchmarked regexp 1).</p>
 
-The results below were produced on a machine with a quad-core Intel Core
-i5-2400 CPU @ 3.10GHz with 4GiB RAM on Fedora 17 (3.8.13-100.fc17.x86\_64).
-It supports SSE4.2.
+<h4 id="single_threaded_recursive_grep_through_the_linux_kernel_sources">Single threaded recursive grep through the Linux kernel sources</h4>
 
-Results are reported for the following engines versions:
+<p><code>jrep</code> is a grep-like utility powered by Rejit.</p>
 
-    GNU grep version 2.14, commit: 599f2b15bc152cdf19022c7803f9a5f336c25e65
-    Rejit commit: 6cd1ca642783ac9968085682b1a82b6961ad9109
-    V8 version 3.20.9, commit: 455bb9c2ab8af080aa15e0fbf4838731f45241e8
-    Re2 commit: aa957b5e3374
-    Python3 version 3.2.3
-    Java version 1.7.0_25
+<p>The commands used to benchmarks follow the form below. In both cases the grep program is run a first time without measurement to give the OS a chance to preload the files. Without this we would be benchmarking the time to access the files.</p>
 
-The benchmarks below try to show the best performance achievable by different
-engines. <br />
-With this goal, comparing other engines to Rejit - which uses SSE4.2 - is fair.
-Grep, Re2, and V8 have been recompiled on the tested system, and have the
-possibility to use SIMD. In fact both V8 and Re2 use SIMD via the system
-`memchr()` implementation (see Rejit benchmarked regexp 1).
+<pre><code>$ REGEXP=&quot;re&quot;; CMD=&quot;jrep -R $REGEXP /work/linux/linux-3.10.6 &quot;; \
+$CMD &gt; /dev/null &amp;&amp; time $CMD &gt; /tmp/res
 
+$ REGEXP=&quot;re&quot;; CMD=&quot;grep -R $REGEXP /work/linux/linux-3.10.6 &quot;; \
+$CMD &gt; /dev/null &amp;&amp; time $CMD &gt; /dev/null</code></pre>
 
-
-
-#### Single threaded recursive grep through the Linux kernel sources
-
-`jrep` is a grep-like utility powered by Rejit.
-
-The commands used to benchmarks follow the form below.
-In both cases the grep program is run a first time without measurement to give
-the OS a chance to preload the files. Without this we would be benchmarking the
-time to access the files.
-
-    $ REGEXP="re"; CMD="jrep -R $REGEXP /work/linux/linux-3.10.6 "; \
-    $CMD > /dev/null && time $CMD > /tmp/res
-
-    $ REGEXP="re"; CMD="grep -R $REGEXP /work/linux/linux-3.10.6 "; \
-    $CMD > /dev/null && time $CMD > /dev/null
-
-For concision, the REGEXP variable is reminded only in the extended regular
-expression (ERE) format. (Grep uses BRE.)
-
-<table style="width:100%; margin-top:20px;">
+<p>For concision, the REGEXP variable is reminded only in the extended regular expression (ERE) format. (Grep uses BRE.)</p>
+<table style='width:100%; margin-top:20px;'>
   <tr>
     <td>
       <strong>GNU grep</strong>
@@ -388,127 +249,98 @@ expression (ERE) format. (Grep uses BRE.)
     </td>
   </tr>
   <tr>
-    <td colspan="3">
+    <td colspan='3'>
       <strong>Regexp</strong>: <code>regexp</code>
     </td>
   </tr>
   <tr>
     <td>
-      <pre style="width:80%"><code>real  0m0.611s
+      <pre style='width:80%'><code>real  0m0.611s
 user  0m0.346s
 sys   0m0.259s</code></pre>
     </td>
     <td>
-      <pre style="width:80%"><code>real  0m0.373s
+      <pre style='width:80%'><code>real  0m0.373s
 user  0m0.112s
 sys   0m0.257s</code></pre>
     </td>
     <td>
-      <span style="color:green">1.64</span>
+      <span style='color:green'>1.64</span>
     </td>
   </tr>
   <tr>
-    <td colspan="3">
+    <td colspan='3'>
       <strong>Regexp</strong>: <code>"(\s\+void.*\(\))|(union.*\{)"</code>
     </td>
   </tr>
   <tr>
     <td>
-      <pre style="width:80%"><code>real  0m1.702s
+      <pre style='width:80%'><code>real  0m1.702s
 user  0m1.422s
 sys   0m0.272s</code></pre>
     </td>
     <td>
-      <pre style="width:80%"><code>real  0m0.523s
+      <pre style='width:80%'><code>real  0m0.523s
 user  0m0.224s
 sys   0m0.293s</code></pre>
     </td>
     <td>
-      <span style="color:green">3.25</span>
+      <span style='color:green'>3.25</span>
     </td>
   </tr>
 </table>
+<p>The <code>jrep</code> utility performs significantly faster than grep in this very real use-cases! To see benchmark results and comments for a wider range of regular expressions, please see <a href="/blog/">this article</a>.</p>
 
-The `jrep` utility performs significantly faster than grep in this very real
-use-cases!  To see benchmark results and comments for a wider range of regular
-expressions, please see [this article][grep jrep benchs article].
+<p><code>jrep</code> is part of the sample programs in the rejit repository (see the <a href="https://github.com/coreperf/rejit/wiki">wiki</a>). It is of course far behind grep in terms of features, but supports searching for multi-lines patterns and has initial multithreading support.</p>
 
-`jrep` is part of the sample programs in the rejit repository (see the
-[wiki][rejit wiki]).  It is of course far behind grep in terms of features, but
-supports searching for multi-lines patterns and has initial multithreading
-support.
+<h4 id="dna_matching_benchmark">DNA matching benchmark</h4>
 
-#### DNA matching benchmark
+<p>From the ”<a href="http://benchmarksgame.alioth.debian.org/">Computer Language Benchmarks Game</a>”, this benchmark performs some DNA matching operations using regular expressions.</p>
 
-From the "[Computer Language Benchmarks Game][cpu_bench]", this
-benchmark performs some DNA matching operations using regular expressions.
+<p>The tables below show performance (<code>real</code> running time) for different input sizes, for</p>
 
-The tables below show performance (`real` running time) for different input
-sizes, for
+<p>the <a href="http://benchmarksgame.alioth.debian.org/u64/program.php?test=regexdna&lang=v8&id=2">fastest registered single-threaded implementation</a> (V8), a single-threaded Rejit-powered implementation, and the fastest single-threaded registered Python and Java 7 implementations.</p>
 
-the
-[fastest registered single-threaded implementation][cpu_bench single threaded fastest]
-(V8), a single-threaded Rejit-powered implementation, and the fastest
-single-threaded registered Python and Java 7 implementations.
+<pre><code>input size                 V8      Rejit     Python       Java
+    50.000 (500KB)     0.034s     0.015s     0.173s     0.233s
+   500.000 (  5MB)     0.217s     0.130s     1.357s     1.357s
+ 5.000.000 ( 50MB)     2.054s     1.246s    13.595s    12.304s
+50.000.000 (500MB)      (oom)    14.624s   140.286s      (oom)
 
-    input size                 V8      Rejit     Python       Java
-        50.000 (500KB)     0.034s     0.015s     0.173s     0.233s
-       500.000 (  5MB)     0.217s     0.130s     1.357s     1.357s
-     5.000.000 ( 50MB)     2.054s     1.246s    13.595s    12.304s
-    50.000.000 (500MB)      (oom)    14.624s   140.286s      (oom)
+(oom): out of memory</code></pre>
 
-    (oom): out of memory
+<p>the <a href="http://benchmarksgame.alioth.debian.org/u32q/program.php?test=regexdna&lang=gpp&id=2">second fastest registered single threaded implementation</a> (Re2) (a quick go at running the first listed implementation would raise failures), a multi-threaded Rejit-powered implementation, and the fastest multi-threaded registered Python and Java 7 implementations.</p>
 
-the
-[second fastest registered single threaded implementation][cpu_bench multi threaded fastest]
-(Re2) (a quick go at running the first listed implementation would raise
-failures), a multi-threaded Rejit-powered implementation, and the fastest
-multi-threaded registered Python and Java 7 implementations.
+<pre><code>input size                Re2      Rejit     Python       Java
+    50.000 (500KB)     0.022s     0.011s     0.167s     0.196s
+   500.000 (  5MB)     0.183s     0.087s     0.897s     0.669s
+ 5.000.000 ( 50MB)     1.629s     0.971s     8.882s     5.166s
+50.000.000 (500MB)    20.693s    11.594s   (killed)      (oom)
 
-    input size                Re2      Rejit     Python       Java
-        50.000 (500KB)     0.022s     0.011s     0.167s     0.196s
-       500.000 (  5MB)     0.183s     0.087s     0.897s     0.669s
-     5.000.000 ( 50MB)     1.629s     0.971s     8.882s     5.166s
-    50.000.000 (500MB)    20.693s    11.594s   (killed)      (oom)
+(oom): out of memory
+(killed): program stopped before finishing.</code></pre>
 
-    (oom): out of memory
-    (killed): program stopped before finishing.
+<p>See performance for various engines and languages for <a href="http://benchmarksgame.alioth.debian.org/u64/benchmark.php?test=regexdna&lang=all&data=u64">single-thread</a> and <a href="http://benchmarksgame.alioth.debian.org/u64q/benchmark.php?test=regexdna&lang=all&data=u64q">multi-threaded</a> implementations. The rejit programs used to run these benchmarks are also part of the rejit sample programs (see the rejit <a href="https://github.com/coreperf/rejit/wiki">wiki</a>).</p>
 
-See performance for various engines and languages for
-[single-thread][cpu_bench single threaded] and
-[multi-threaded][cpu_bench multi threaded] implementations.
-The rejit programs used to run these benchmarks are also part of the rejit
-sample programs (see the rejit [wiki][rejit wiki]).
+<h4 id="rejit_benchmarks">Rejit benchmarks</h4>
 
+<p>These are benchmarks from the Rejit repository. Engines are benchmarked to find all (leftmost longest) matches of a regular expression in a randomly generated text (with characters in the range <code>[0-z]</code> if nothing else is specified). <br />Performance is reported in bytes per second (size of the text matched divided by the time to process it). This can be seen as the speed at which files of a given size can be processed. It is easier to report and appreciate than a delay close to zero.</p>
 
+<p>Benchmark 4 illustrates the fast-forward mechanism, but other benchmarks show Rejit performing well for more common patterns.</p>
 
-#### Rejit benchmarks
+<p><br /></p>
 
-These are benchmarks from the Rejit repository.
-Engines are benchmarked to find all (leftmost longest) matches of a regular
-expression in a randomly generated text (with characters in the range `[0-z]`
-if nothing else is specified).
-<br />Performance is reported in bytes per second (size of the text matched
-divided by the time to process it). This can be seen as the speed at which
-files of a given size can be processed. It is easier to report and appreciate
-than a delay close to zero.
+<ul>
+<li>’<em>best</em> ’ performance graphs don’t take compilation time into account.</li>
 
-Benchmark 4 illustrates the fast-forward mechanism, but other benchmarks show
-Rejit performing well for more common patterns.
+<li>’<em>worst</em> ’ performance graphs show performance for 1 run and 1 compilation.</li>
 
-<br />
-* '*best* ' performance graphs don't take compilation time into account.
-* '*worst* ' performance graphs show performance for 1 run and 1 compilation.
-* '*amortised* ' performance graphs show performance for 1 compilation and 100 runs.
-  (Due to Javascript `Date` precision in milliseconds, V8 text sizes under
-  128KiB use 20.000 runs instead.)
-
-
-<script language="javascript" type="text/javascript" src="/resources/js/flot/jquery.min.js"> </script>
-<script language="javascript" type="text/javascript" src="/resources/js/flot/jquery.flot.min.js"> </script>
-<script language="javascript" type="text/javascript" src="/resources/js/flot/jquery.flot.time.min.js"> </script>
-<script language="javascript" type="text/javascript" src="/resources/js/flot_utils.js"> </script>
-
+<li>’<em>amortised</em> ’ performance graphs show performance for 1 compilation and 100 runs. (Due to Javascript <code>Date</code> precision in milliseconds, V8 text sizes under 128KiB use 20.000 runs instead.)</li>
+</ul>
+<script language='javascript' src='/resources/js/flot/jquery.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot/jquery.flot.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot/jquery.flot.time.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot_utils.js' type='text/javascript'></script>
 <table>
   <tr>
     <td>
@@ -533,13 +365,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_0_chars_null_density" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_0_chars_null_density_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_0_chars_null_density' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_0_chars_null_density_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script language="javascript" type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_0_chars_null_density_re2_amortised = [[8,1.86047e+07],[16,3.72093e+07],[32,7.27273e+07],[64,1.45455e+08],[128,2.90909e+08],[256,5.12e+08],[512,1.11304e+09],[1024,2.13333e+09],[2048,3.01176e+09],[4096,6.4e+09],[8192,9.99024e+09],[16384,1.30032e+10],[32768,1.51005e+10],[65536,1.5384e+10],[131072,1.4278e+10],[262144,2.92898e+10],[524288,2.40609e+10],[1048576,2.63726e+10],[2097152,2.64092e+10],[4194304,2.52426e+10],[8388608,1.08875e+10],[16777216,9.26447e+09],];
           var data_0_chars_null_density_re2_best = [[8,2.35294e+07],[16,4.84848e+07],[32,9.14286e+07],[64,1.88235e+08],[128,3.76471e+08],[256,6.2439e+08],[512,1.38378e+09],[1024,2.62564e+09],[2048,3.47119e+09],[4096,7.44727e+09],[8192,1.12219e+10],[16384,1.41241e+10],[32768,1.583e+10],[65536,1.57161e+10],[131072,1.44512e+10],[262144,2.94544e+10],[524288,2.41163e+10],[1048576,2.64058e+10],[2097152,2.64258e+10],[4194304,2.52517e+10],[8388608,1.08892e+10],[16777216,9.26514e+09],];
@@ -564,7 +396,7 @@ Rejit performing well for more common patterns.
                                           $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                           });
         });
-        -->
+
       </script>
     </td>
   </tr>
@@ -582,13 +414,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_1_chars_average_density" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_1_chars_average_density_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_1_chars_average_density' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_1_chars_average_density_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_1_chars_average_density_re2_amortised = [[8,1.90476e+07],[16,3.72093e+07],[32,7.44186e+07],[64,1.33333e+08],[128,2.61224e+08],[256,4.33898e+08],[512,6.2439e+08],[1024,8.60504e+08],[2048,1.00392e+09],[4096,1.15706e+09],[8192,1.27403e+09],[16384,1.26031e+09],[32768,1.05026e+09],[65536,1.72327e+09],[131072,1.5671e+09],[262144,1.49591e+09],[524288,1.44241e+09],[1048576,1.43869e+09],[2097152,1.43438e+09],[4194304,1.44283e+09],[8388608,1.41167e+09],[16777216,1.40975e+09],];
           var data_1_chars_average_density_re2_best = [[8,2.42424e+07],[16,4.70588e+07],[32,9.69697e+07],[64,1.68421e+08],[128,3.28205e+08],[256,5.22449e+08],[512,7.11111e+08],[1024,9.3945e+08],[2048,1.05026e+09],[4096,1.18725e+09],[8192,1.29415e+09],[16384,1.26909e+09],[32768,1.05363e+09],[65536,1.72554e+09],[131072,1.56803e+09],[262144,1.49634e+09],[524288,1.44261e+09],[1048576,1.43881e+09],[2097152,1.43444e+09],[4194304,1.44286e+09],[8388608,1.4117e+09],[16777216,1.40976e+09],];
@@ -613,7 +445,7 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
@@ -629,13 +461,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_2_chars_high_density" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_2_chars_high_density_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_2_chars_high_density' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_2_chars_high_density_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_2_chars_high_density_re2_amortised = [[8,1.73913e+07],[16,3.47826e+07],[32,6.4e+07],[64,1.10345e+08],[128,1.66234e+08],[256,2.66667e+08],[512,4.12903e+08],[1024,4.14575e+08],[2048,5.12e+08],[4096,4.97087e+08],[8192,4.61521e+08],[16384,4.06047e+08],[32768,7.2208e+08],[65536,6.99872e+08],[131072,6.94348e+08],[262144,6.82152e+08],[524288,6.73373e+08],[1048576,6.72751e+08],[2097152,6.7318e+08],[4194304,6.73045e+08],[8388608,6.65113e+08],[16777216,6.65597e+08],];
           var data_2_chars_high_density_re2_best = [[8,2.16216e+07],[16,4.44444e+07],[32,8e+07],[64,1.33333e+08],[128,1.88235e+08],[256,2.97674e+08],[512,4.45217e+08],[1024,4.32068e+08],[2048,5.23785e+08],[4096,5.03194e+08],[8192,4.64136e+08],[16384,4.07056e+08],[32768,7.22877e+08],[65536,7.00171e+08],[131072,6.94568e+08],[262144,6.82258e+08],[524288,6.73425e+08],[1048576,6.72772e+08],[2097152,6.73193e+08],[4194304,6.73053e+08],[8388608,6.6512e+08],[16777216,6.656e+08],];
@@ -660,7 +492,7 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
@@ -679,13 +511,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_3_complex_simple_ff" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_3_complex_simple_ff_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_3_complex_simple_ff' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_3_complex_simple_ff_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_3_complex_simple_ff_re2_amortised = [[8,7.76699e+06],[16,1.36752e+07],[32,4.63768e+07],[64,4.74074e+07],[128,6.4e+07],[256,7.85276e+07],[512,8.61953e+07],[1024,1.54683e+08],[2048,1.49708e+08],[4096,1.59688e+08],[8192,1.63317e+08],[16384,1.6335e+08],[32768,1.6487e+08],[65536,1.66534e+08],[131072,1.66551e+08],[262144,1.66966e+08],[524288,1.6648e+08],[1048576,1.66761e+08],[2097152,1.66937e+08],[4194304,1.66947e+08],[8388608,1.66997e+08],[16777216,1.67016e+08],];
           var data_3_complex_simple_ff_re2_best = [[8,1.48148e+07],[16,2.38806e+07],[32,6.95652e+07],[64,6.53061e+07],[128,7.85276e+07],[256,8.98246e+07],[512,9.27536e+07],[1024,1.60754e+08],[2048,1.52608e+08],[4096,1.6126e+08],[8192,1.64168e+08],[16384,1.63807e+08],[32768,1.65103e+08],[65536,1.66669e+08],[131072,1.66616e+08],[262144,1.66999e+08],[524288,1.66496e+08],[1048576,1.6677e+08],[2097152,1.66941e+08],[4194304,1.66949e+08],[8388608,1.66999e+08],[16777216,1.67017e+08],];
@@ -710,7 +542,7 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
@@ -735,13 +567,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_4_alternation_2_long" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_4_alternation_2_long_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_4_alternation_2_long' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_4_alternation_2_long_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_4_alternation_2_long_re2_amortised = [[8,1.45455e+07],[16,2.58065e+07],[32,4.26667e+07],[64,6.33663e+07],[128,7.75758e+07],[256,9.73384e+07],[512,1.07563e+08],[1024,1.14413e+08],[2048,1.17634e+08],[4096,1.19977e+08],[8192,2.47492e+08],[16384,2.22912e+08],[32768,2.57549e+08],[65536,2.59765e+08],[131072,2.59626e+08],[262144,2.59783e+08],[524288,2.59198e+08],[1048576,2.59341e+08],[2097152,2.59646e+08],[4194304,2.59397e+08],[8388608,2.57808e+08],[16777216,2.57794e+08],];
           var data_4_alternation_2_long_re2_best = [[8,2e+07],[16,3.40426e+07],[32,5.2459e+07],[64,7.35632e+07],[128,8.53333e+07],[256,1.03226e+08],[512,1.11063e+08],[1024,1.16364e+08],[2048,1.18587e+08],[4096,1.20506e+08],[8192,2.48017e+08],[16384,2.23185e+08],[32768,2.57691e+08],[65536,2.59847e+08],[131072,2.59667e+08],[262144,2.59803e+08],[524288,2.59208e+08],[1048576,2.59346e+08],[2097152,2.59648e+08],[4194304,2.59398e+08],[8388608,2.57809e+08],[16777216,2.57795e+08],];
@@ -766,7 +598,7 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
@@ -790,13 +622,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_5_alternation_2_short" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_5_alternation_2_short_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_5_alternation_2_short' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_5_alternation_2_short_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_5_alternation_2_short_re2_amortised = [[8,1.53846e+07],[16,2.75862e+07],[32,4e+07],[64,6.46465e+07],[128,8.70748e+07],[256,9.92248e+07],[512,1.11547e+08],[1024,1.17701e+08],[2048,1.19556e+08],[4096,1.21687e+08],[8192,1.66877e+08],[16384,2.36524e+08],[32768,2.54647e+08],[65536,2.59775e+08],[131072,2.59775e+08],[262144,2.59788e+08],[524288,2.55849e+08],[1048576,2.59751e+08],[2097152,2.59413e+08],[4194304,2.59689e+08],[8388608,2.57857e+08],[16777216,2.57999e+08],];
           var data_5_alternation_2_short_re2_best = [[8,2e+07],[16,3.55556e+07],[32,5.33333e+07],[64,7.44186e+07],[128,9.55224e+07],[256,1.09871e+08],[512,1.14798e+08],[1024,1.19487e+08],[2048,1.20471e+08],[4096,1.22159e+08],[8192,1.6732e+08],[16384,2.36763e+08],[32768,2.54786e+08],[65536,2.59837e+08],[131072,2.59811e+08],[262144,2.59806e+08],[524288,2.55858e+08],[1048576,2.59756e+08],[2097152,2.59416e+08],[4194304,2.59691e+08],[8388608,2.57859e+08],[16777216,2.58e+08],];
@@ -821,7 +653,7 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
@@ -845,13 +677,13 @@ Rejit performing well for more common patterns.
     </td>
   </tr>
   <tr>
-    <td style="padding-bottom:50px;">
+    <td style='padding-bottom:50px;'>
       <div>
-        <div class="graph" id="plot_parallel_6_alternation_2_common_prefix" style="float:left;"> </div>
-        <div style="float:left;"> <ul id="plot_parallel_6_alternation_2_common_prefix_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+        <div class='graph' id='plot_parallel_6_alternation_2_common_prefix' style='float:left;'> </div>
+        <div style='float:left;'> <ul class='flot_choices' id='plot_parallel_6_alternation_2_common_prefix_choices' style='list-style: none;'> </ul> </div>
       </div>
-      <script type="text/javascript">
-        <!--
+      <script language='javascript' type='text/javascript'>
+
         $(function () {
           var data_6_alternation_2_common_prefix_re2_amortised = [[8,1.56863e+07],[16,3.2e+07],[32,6.4e+07],[64,1.20755e+08],[128,2.28571e+08],[256,4e+08],[512,5.88506e+08],[1024,8.12698e+08],[2048,1.01386e+09],[4096,1.13778e+09],[8192,1.27205e+09],[16384,1.29008e+09],[32768,1.02785e+09],[65536,1.07489e+09],[131072,1.51546e+09],[262144,1.51214e+09],[524288,1.45176e+09],[1048576,1.44637e+09],[2097152,1.4404e+09],[4194304,1.44584e+09],[8388608,1.41863e+09],[16777216,1.41723e+09],];
           var data_6_alternation_2_common_prefix_re2_best = [[8,2.28571e+07],[16,4.70588e+07],[32,9.41176e+07],[64,1.72973e+08],[128,3.2e+08],[256,5.33333e+08],[512,7.21127e+08],[1024,9.30909e+08],[2048,1.10108e+09],[4096,1.1907e+09],[8192,1.30238e+09],[16384,1.30654e+09],[32768,1.03336e+09],[65536,1.07772e+09],[131072,1.51721e+09],[262144,1.51292e+09],[524288,1.45212e+09],[1048576,1.44655e+09],[2097152,1.4405e+09],[4194304,1.4459e+09],[8388608,1.41868e+09],[16777216,1.41725e+09],];
@@ -876,47 +708,15 @@ Rejit performing well for more common patterns.
                                             $(this).clone().prependTo(choiceContainer.find("li").eq(i));
                                             });
           });
-        -->
+
       </script>
     </td>
   </tr>
 </table>
+<h3 id="future_work">Future work</h3>
 
+<p>Performance already looks good, and the fast-forward mechanism enables stable high performance for a wide range of regular expressions, but no real work has yet gone into fine optimisation. The handling of many ‘tricky’ regular expressions could be improved to yield much faster code. But even simple word searches like in benchmarks 1, 2, and 3 may benefit from a rewrite: <code>pcmp_str_</code> instructions are convenient, but well designed code using AVX <code>pcmp</code> may turn out to be faster.</p>
 
+<p>Before any further performance work, important features like case-insensitive search, submatches, backward-references, handling of other character types, etc. may be required to make rejit more attractive for general purposes.</p>
 
-
-### Future work
-
-Performance already looks good, and the fast-forward mechanism enables stable
-high performance for a wide range of regular expressions, but no real work has
-yet gone into fine optimisation.
-The handling of many 'tricky' regular expressions could be improved to yield
-much faster code. But even simple word searches like in benchmarks 1, 2, and 3
-may benefit from a rewrite: `pcmp_str_` instructions are convenient, but well
-designed code using AVX `pcmp` may turn out to be faster.
-
-Before any further performance work, important features like
-case-insensitive search, submatches, backward-references, handling of other
-character types, etc.  may be required to make rejit more attractive for general
-purposes.
-
-For questions, feedback, suggestions, to talk about regular expression matching,
-optimisation, or other related topics, please use the [rejit-users group][rejit_users]
-or [email me][email alexandre].
-
-
-
-  [rejit wiki]: https://github.com/coreperf/rejit/wiki
-  [Russ Cox articles]: http://swtch.com/~rsc/regexp/
-  [Russ Cox article 1]: http://swtch.com/~rsc/regexp/regexp1.html
-  [Wikipedia NFA]: http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
-  [Intel manuals]: http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html
-  [SIMD loop example]: https://github.com/arames/rejit/blob/master/src/x64/codegen-x64.cc#L1064
-  [cpu_bench]: http://benchmarksgame.alioth.debian.org/
-  [cpu_bench single threaded fastest]: http://benchmarksgame.alioth.debian.org/u64/program.php?test=regexdna&lang=v8&id=2
-  [cpu_bench single threaded]: http://benchmarksgame.alioth.debian.org/u64/benchmark.php?test=regexdna&lang=all&data=u64
-  [cpu_bench multi threaded fastest]: http://benchmarksgame.alioth.debian.org/u32q/program.php?test=regexdna&lang=gpp&id=2
-  [cpu_bench multi threaded]: http://benchmarksgame.alioth.debian.org/u64q/benchmark.php?test=regexdna&lang=all&data=u64q
-  [rejit_users]: https://groups.google.com/forum/#!forum/rejit-users
-  [email alexandre]: mailto:alexandre@coreperf.com
-  [grep jrep benchs article]: /blog/
+<p>For questions, feedback, suggestions, to talk about regular expression matching, optimisation, or other related topics, please use the <a href="https://groups.google.com/forum/#!forum/rejit-users">rejit-users group</a> or <a href="mailto:alexandre@coreperf.com">email me</a>.</p>
