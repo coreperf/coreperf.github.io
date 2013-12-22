@@ -3,7 +3,7 @@ Slate Theme for GitHub Pages
 by Jason Costello, @jsncostello
 *******************************************************************************/
 
-@import url(syntax.css);
+@import url(pygments/default.css);
 
 /*******************************************************************************
 MeyerWeb Reset

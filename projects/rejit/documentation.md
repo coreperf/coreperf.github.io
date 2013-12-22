@@ -11,13 +11,14 @@ project_github_url: https://github.com/coreperf/rejit
 All scripts and utilities should include a help message available via ```$ <script> --help```
 
 First build rejit.
-```
+{% highlight sh %}
 $ cd <rejit>
 $ scons
-```
+{% endhighlight %}
 
 Then include ```<rejit>/include/rejit.h``` in your program.
-```
+
+{% highlight c %}
 #include <rejit.h>
 using namespace std;
 using namespace rejit;
@@ -31,12 +32,12 @@ int main() {
   }
   return 0;
 }
-```
+{% endhighlight %}
 
 Finally, compile and link your program with the rejit library
-```
+{% highlight sh %}
 $ g++ -o myprg myprg.cc -I<rejit>/include -L<rejit>/build/latest -lrejit
-```
+{% endhighlight %}
 
 Documentation for the various functions offered by rejit are available as comments in ```include/rejit.h```.
 You can also find examples in the sample programs provided in ```sample/```.
@@ -45,11 +46,11 @@ You can also find examples in the sample programs provided in ```sample/```.
 
 A few sample programs using rejit are included in the ```sample/``` folder.
 It includes the ```regexdna``` and ```jrep``` samples. Compile them with:
-```
+{% highlight sh %}
 $ scons sample/basic
 $ scons sample/jrep
 $ scons sample/regexdna
 $ scons sample/regexdna-multithread
-```
+{% endhighlight %}
 
 Use ```$ sample/<sample> --help``` for details.
