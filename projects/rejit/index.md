@@ -19,14 +19,16 @@ architectures, help integrate Rejit into your projects, etc.
 
 ### Pages
 
-* [Documentation][rejit wiki], on the Rejit wiki
+* [Documentation][rejit documentation]
 * [Recent benchmarks][rejit benchmarks] of rejit and other engines
 * [Introduction to Rejit mechanisms][rejit intro]
+* [Contributing][rejit contributing]
 
 
 
-  [rejit github]: https://github.com/coreperf/rejit
-  [rejit wiki]: https://github.com/coreperf/rejit/wiki
+  [rejit github]: https://github.com/coreperf/rejit 
+  [rejit documentation]: /projects/rejit/documentation.html
   [rejit benchmarks]: /projects/rejit/benchmarks.html
   [rejit intro]: /projects/rejit/introduction.html
+  [rejit contributing]: /projects/rejit/contributing.html
   [email alexandre]: mailto:alexandre@coreperf.com
