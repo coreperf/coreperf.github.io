@@ -1,0 +1,235 @@
+---
+layout: post
+title:  "Common substring extraction in Rejit."
+date:   2013-12-22
+author: Alexandre rames
+categories: [update,rejit]
+---
+
+
+<p>
+Basic common substring extraction has been implemented into Rejit.  The common
+substring extraction is performed on the fast-forward elements. Here are
+benchmarks before (engine <code>rejit</code>) and after (engine
+<code>rejit_cst</code>) the introduction of the new feature. You can also have a
+look at <a href="/projects/rejit/benchmarks.html">the complete set of benchmarks including other engines</a>.
+</p>
+
+
+<script language='javascript' src='/resources/js/flot/jquery.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot/jquery.flot.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot/jquery.flot.time.min.js' type='text/javascript'></script>
+<script language='javascript' src='/resources/js/flot_utils.js' type='text/javascript'></script>
+
+
+<table style="text-align:right; margin-top: 3em;">
+<tr><td>engine</td><td style="padding-left:50px;">commit</td></tr><tr>
+  <td>rejit_cst</td><td style="padding-left:50px;"><pre style="padding:0 0 0 0;margin:0 0 0 0;">eba33f0167b48c63ff4dbf03a965c74f8440343a</pre></td>
+</tr>
+<tr>
+  <td>rejit</td><td style="padding-left:50px;"><pre style="padding:0 0 0 0;margin:0 0 0 0;">00017b9606a2ccfb2c37ffcf89b5da47499623fb</pre></td>
+</tr>
+</table>
+
+<table>
+
+  <tr>
+    <td style="padding-top: 1em;">
+      <div style="padding: 2em 0 0 5em;">
+      <pre>regexp: (prefix abcd|prefix 1234)
+range: ['0','z']</pre> </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td>
+      <div>
+        <div id="plot_parallel_9" style="float:left;width:600px;height:400px"></div>
+        <div style="float:left;"> <ul id="plot_parallel_9_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+      </div>
+      <script type="text/javascript">
+        $(function () {
+          
+var data_9_rejit_amortised = [[8,3.47826e+07],[16,5.71429e+07],[32,1.06667e+08],[64,1.68421e+08],[128,3.65714e+08],[256,6.5641e+08],[512,1.28e+09],[1024,2.3814e+09],[2048,3.59298e+09],[4096,4.70805e+09],[8192,5.93623e+09],[16384,6.85523e+09],[32768,6.91308e+09],[65536,5.89883e+09],[131072,6.55032e+09],[262144,7.77875e+09],[524288,7.62712e+09],[1048576,7.6072e+09],[2097152,7.51748e+09]];
+var data_9_rejit_worse = [[8,392927],[16,828586],[32,1.6851e+06],[64,3.25369e+06],[128,6.25e+06],[256,1.23791e+07],[512,2.47224e+07],[1024,5.00978e+07],[2048,1.05026e+08],[4096,2.07919e+08],[8192,3.99805e+08],[16384,7.67041e+08],[32768,1.26031e+09],[65536,2.18381e+09],[131072,2.4895e+09],[262144,4.70045e+09],[524288,5.77855e+09],[1048576,6.51087e+09],[2097152,6.89105e+09]];
+var data_9_rejit_best = [[8,8.88889e+07],[16,1.33333e+08],[32,2.13333e+08],[64,2.90909e+08],[128,6.73684e+08],[256,1.21905e+09],[512,2.13333e+09],[1024,3.53103e+09],[2048,4.87619e+09],[4096,5.85143e+09],[8192,6.66016e+09],[16384,7.31429e+09],[32768,7.15459e+09],[65536,6.00147e+09],[131072,6.63992e+09],[262144,7.81819e+09],[524288,7.64603e+09],[1048576,7.6188e+09],[2097152,7.52234e+09]];
+var data_9_rejit_cst_amortised = [[8,1.26984e+07],[16,2.53968e+07],[32,4.44444e+07],[64,8.64865e+07],[128,1.77778e+08],[256,3.55556e+08],[512,6.16867e+08],[1024,1.2962e+09],[2048,2.62564e+09],[4096,4.45217e+09],[8192,6.94237e+09],[16384,9.58129e+09],[32768,1.17029e+10],[65536,1.33203e+10],[131072,1.40938e+10],[262144,1.4278e+10],[524288,1.46818e+10],[1048576,1.46592e+10],[2097152,1.45303e+10]];
+var data_9_rejit_cst_worse = [[8,162140],[16,312928],[32,525193],[64,1.23983e+06],[128,1.9885e+06],[256,4.91457e+06],[512,7.88056e+06],[1024,1.83119e+07],[2048,4.20275e+07],[4096,8.46981e+07],[8192,1.68007e+08],[16384,3.33483e+08],[32768,6.54575e+08],[65536,1.23653e+09],[131072,2.23787e+09],[262144,3.84038e+09],[524288,6.03671e+09],[1048576,8.45081e+09],[2097152,1.04769e+10]];
+var data_9_rejit_cst_best = [[8,4e+07],[16,8e+07],[32,1.23077e+08],[64,2.56e+08],[128,4.92308e+08],[256,9.84615e+08],[512,1.46286e+09],[1024,3.30323e+09],[2048,5.68889e+09],[4096,8.71489e+09],[8192,1.09227e+10],[16384,1.28e+10],[32768,1.38262e+10],[65536,1.46286e+10],[131072,1.47937e+10],[262144,1.46449e+10],[524288,1.48734e+10],[1048576,1.47521e+10],[2097152,1.45777e+10]];
+          var datasets = [ 
+{data: data_9_rejit_amortised, label: "rejit amortised", color:"#DEBD00"},
+{data: data_9_rejit_worse, label: "rejit worse", color:"#E0D48D"},
+{data: data_9_rejit_best, label: "rejit best", color:"#E0D48D"},
+{data: data_9_rejit_cst_amortised, label: "rejit_cst amortised", color:"#277AD9"},
+{data: data_9_rejit_cst_worse, label: "rejit_cst worse", color:"#94B8E0"},
+{data: data_9_rejit_cst_best, label: "rejit_cst best", color:"#94B8E0"}, ];
+
+          var choiceContainer = $("#plot_parallel_9_choices");
+          $.each(datasets, function(key, val) {
+             choiceContainer.append('<li style="list-style: none;"><input type="checkbox" name="' + key +
+                                    '" checked="checked" id="id' + key + '">' +
+                                    '<label for="id' + key + '">'
+                                    + val.label + '</label></li>');
+          });
+
+          plot_according_to_choices("plot_parallel_9", datasets, choiceContainer);
+          $("#plot_parallel_9").bind("plothover", plothover_func);
+          function replot() { plot_according_to_choices("plot_parallel_9", datasets, choiceContainer); }
+          choiceContainer.find("input").change(replot);
+          $('.legendColorBox > div').each(function(i){
+                                          $(this).clone().prependTo(choiceContainer.find("li").eq(i));
+                                          });
+        });
+      </script>
+    </td>
+
+  <tr>
+    <td style="padding-top: 1em;">
+      <div style="padding: 2em 0 0 5em;">
+      <pre>regexp: (abcd suffix|1234 suffix)
+range: ['0','z']</pre> </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td>
+      <div>
+        <div id="plot_parallel_10" style="float:left;width:600px;height:400px"></div>
+        <div style="float:left;"> <ul id="plot_parallel_10_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+      </div>
+      <script type="text/javascript">
+        $(function () {
+          
+var data_10_rejit_amortised = [[8,3.33333e+07],[16,5.92593e+07],[32,1.10345e+08],[64,1.72973e+08],[128,3.55556e+08],[256,6.73684e+08],[512,1.28e+09],[1024,2.3814e+09],[2048,3.05672e+09],[4096,4.4043e+09],[8192,5.28516e+09],[16384,5.16845e+09],[32768,5.0882e+09],[65536,7.20968e+09],[131072,7.31021e+09],[262144,7.21961e+09],[524288,7.21563e+09],[1048576,6.97702e+09],[2097152,6.71432e+09]];
+var data_10_rejit_worse = [[8,398804],[16,843437],[32,1.69312e+06],[64,3.26198e+06],[128,6.29302e+06],[256,1.24453e+07],[512,2.48906e+07],[1024,5.12769e+07],[2048,1.03174e+08],[4096,1.91134e+08],[8192,3.67684e+08],[16384,6.39251e+08],[32768,9.81078e+08],[65536,1.93094e+09],[131072,3.38076e+09],[262144,4.52909e+09],[524288,5.5165e+09],[1048576,6.0049e+09],[2097152,6.17681e+09]];
+var data_10_rejit_best = [[8,1e+08],[16,1.45455e+08],[32,2.28571e+08],[64,3.04762e+08],[128,6.4e+08],[256,1.21905e+09],[512,2.13333e+09],[1024,3.65714e+09],[2048,4.01569e+09],[4096,5.46133e+09],[8192,5.89353e+09],[16384,5.63024e+09],[32768,5.21783e+09],[65536,7.33886e+09],[131072,7.37603e+09],[262144,7.25156e+09],[524288,7.23156e+09],[1048576,6.98538e+09],[2097152,6.71798e+09]];
+var data_10_rejit_cst_amortised = [[8,1.37931e+07],[16,2.75862e+07],[32,4.92308e+07],[64,9.55224e+07],[128,2.13333e+08],[256,4.12903e+08],[512,8.12698e+08],[1024,1.46286e+09],[2048,1.8789e+09],[4096,4.76279e+09],[8192,7.44727e+09],[16384,1.03696e+10],[32768,1.29518e+10],[65536,1.4596e+10],[131072,1.57161e+10],[262144,1.62822e+10],[524288,1.6513e+10],[1048576,1.68122e+10],[2097152,1.68162e+10]];
+var data_10_rejit_cst_worse = [[8,186176],[16,383142],[32,729927],[64,1.42857e+06],[128,2.94456e+06],[256,6.16422e+06],[512,1.22664e+07],[1024,2.27657e+07],[2048,4.05143e+07],[4096,7.32737e+07],[8192,1.94215e+08],[16384,3.85597e+08],[32768,7.52941e+08],[65536,1.40756e+09],[131072,2.57256e+09],[262144,4.39397e+09],[524288,6.94881e+09],[1048576,9.72525e+09],[2097152,1.24173e+10]];
+var data_10_rejit_cst_best = [[8,3.80952e+07],[16,7.61905e+07],[32,1.33333e+08],[64,2.46154e+08],[128,5.33333e+08],[256,1.024e+09],[512,1.96923e+09],[1024,3.30323e+09],[2048,3.59298e+09],[4096,8.53333e+09],[8192,1.12219e+10],[16384,1.35405e+10],[32768,1.51005e+10],[65536,1.59844e+10],[131072,1.64663e+10],[262144,1.66758e+10],[524288,1.67184e+10],[1048576,1.6918e+10],[2097152,1.68703e+10]];
+          var datasets = [ 
+{data: data_10_rejit_amortised, label: "rejit amortised", color:"#DEBD00"},
+{data: data_10_rejit_worse, label: "rejit worse", color:"#E0D48D"},
+{data: data_10_rejit_best, label: "rejit best", color:"#E0D48D"},
+{data: data_10_rejit_cst_amortised, label: "rejit_cst amortised", color:"#277AD9"},
+{data: data_10_rejit_cst_worse, label: "rejit_cst worse", color:"#94B8E0"},
+{data: data_10_rejit_cst_best, label: "rejit_cst best", color:"#94B8E0"}, ];
+
+          var choiceContainer = $("#plot_parallel_10_choices");
+          $.each(datasets, function(key, val) {
+             choiceContainer.append('<li style="list-style: none;"><input type="checkbox" name="' + key +
+                                    '" checked="checked" id="id' + key + '">' +
+                                    '<label for="id' + key + '">'
+                                    + val.label + '</label></li>');
+          });
+
+          plot_according_to_choices("plot_parallel_10", datasets, choiceContainer);
+          $("#plot_parallel_10").bind("plothover", plothover_func);
+          function replot() { plot_according_to_choices("plot_parallel_10", datasets, choiceContainer); }
+          choiceContainer.find("input").change(replot);
+          $('.legendColorBox > div').each(function(i){
+                                          $(this).clone().prependTo(choiceContainer.find("li").eq(i));
+                                          });
+        });
+      </script>
+    </td>
+
+  <tr>
+    <td style="padding-top: 1em;">
+      <div style="padding: 2em 0 0 5em;">
+      <pre>regexp: (abcdefgh anywhere xyz|01 anywhere 56789)
+range: ['0','z']</pre> </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td>
+      <div>
+        <div id="plot_parallel_11" style="float:left;width:600px;height:400px"></div>
+        <div style="float:left;"> <ul id="plot_parallel_11_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+      </div>
+      <script type="text/javascript">
+        $(function () {
+          
+var data_11_rejit_amortised = [[8,2.58065e+07],[16,5.16129e+07],[32,8.88889e+07],[64,1.33333e+08],[128,2.84444e+08],[256,5.68889e+08],[512,1.13778e+09],[1024,1.57538e+09],[2048,3.10303e+09],[4096,3.79259e+09],[8192,3.77512e+09],[16384,5.5539e+09],[32768,6.41252e+09],[65536,7.1624e+09],[131072,7.2737e+09],[262144,7.30003e+09],[524288,7.16534e+09],[1048576,6.78339e+09],[2097152,6.54011e+09]];
+var data_11_rejit_worse = [[8,364465],[16,767754],[32,1.53477e+06],[64,2.72689e+06],[128,5.67376e+06],[256,1.11986e+07],[512,2.27253e+07],[1024,4.48336e+07],[2048,8.81998e+07],[4096,1.66504e+08],[8192,2.63663e+08],[16384,4.80892e+08],[32768,1.22086e+09],[65536,2.10659e+09],[131072,3.23635e+09],[262144,4.34517e+09],[524288,5.37842e+09],[1048576,5.82672e+09],[2097152,5.5939e+09]];
+var data_11_rejit_best = [[8,6.66667e+07],[16,1.14286e+08],[32,1.68421e+08],[64,2.13333e+08],[128,4.92308e+08],[256,9.48148e+08],[512,1.82857e+09],[1024,2.17872e+09],[2048,4.35745e+09],[4096,4.87619e+09],[8192,4.13737e+09],[16384,5.93623e+09],[32768,6.67373e+09],[65536,7.298e+09],[131072,7.34709e+09],[262144,7.33886e+09],[524288,7.18498e+09],[1048576,6.79218e+09],[2097152,6.5444e+09]];
+var data_11_rejit_cst_amortised = [[8,8.88889e+06],[16,1.58416e+07],[32,3.13725e+07],[64,6.73684e+07],[128,1.21905e+08],[256,2.63918e+08],[512,4.65455e+08],[1024,1.01386e+09],[2048,1.8789e+09],[4096,3.35738e+09],[8192,5.61096e+09],[16384,8.48912e+09],[32768,1.12993e+10],[65536,1.34571e+10],[131072,1.47438e+10],[262144,1.59746e+10],[524288,1.6456e+10],[1048576,1.67104e+10],[2097152,1.67839e+10]];
+var data_11_rejit_cst_worse = [[8,118256],[16,211361],[32,380590],[64,934170],[128,1.76333e+06],[256,3.51407e+06],[512,7.21127e+06],[1024,1.53569e+07],[2048,3.04038e+07],[4096,6.01468e+07],[8192,1.19714e+08],[16384,2.3866e+08],[32768,4.68717e+08],[65536,9.10981e+08],[131072,1.69125e+09],[262144,3.06243e+09],[524288,5.17764e+09],[1048576,7.93414e+09],[2097152,1.07973e+10]];
+var data_11_rejit_cst_best = [[8,2.66667e+07],[16,4.84848e+07],[32,9.14286e+07],[64,1.88235e+08],[128,3.45946e+08],[256,7.11111e+08],[512,1.42222e+09],[1024,2.56e+09],[2048,4.45217e+09],[4096,6.94237e+09],[8192,9.86988e+09],[16384,1.26031e+10],[32768,1.43719e+10],[65536,1.55299e+10],[131072,1.58875e+10],[262144,1.66441e+10],[524288,1.6788e+10],[1048576,1.68826e+10],[2097152,1.68731e+10]];
+          var datasets = [ 
+{data: data_11_rejit_amortised, label: "rejit amortised", color:"#DEBD00"},
+{data: data_11_rejit_worse, label: "rejit worse", color:"#E0D48D"},
+{data: data_11_rejit_best, label: "rejit best", color:"#E0D48D"},
+{data: data_11_rejit_cst_amortised, label: "rejit_cst amortised", color:"#277AD9"},
+{data: data_11_rejit_cst_worse, label: "rejit_cst worse", color:"#94B8E0"},
+{data: data_11_rejit_cst_best, label: "rejit_cst best", color:"#94B8E0"}, ];
+
+          var choiceContainer = $("#plot_parallel_11_choices");
+          $.each(datasets, function(key, val) {
+             choiceContainer.append('<li style="list-style: none;"><input type="checkbox" name="' + key +
+                                    '" checked="checked" id="id' + key + '">' +
+                                    '<label for="id' + key + '">'
+                                    + val.label + '</label></li>');
+          });
+
+          plot_according_to_choices("plot_parallel_11", datasets, choiceContainer);
+          $("#plot_parallel_11").bind("plothover", plothover_func);
+          function replot() { plot_according_to_choices("plot_parallel_11", datasets, choiceContainer); }
+          choiceContainer.find("input").change(replot);
+          $('.legendColorBox > div').each(function(i){
+                                          $(this).clone().prependTo(choiceContainer.find("li").eq(i));
+                                          });
+        });
+      </script>
+    </td>
+
+  <tr>
+    <td style="padding-top: 1em;">
+      <div style="padding: 2em 0 0 5em;">
+      <pre>regexp: (some|[stuff])((other|regexps)? bla root blah | (abcdefgh boot{3,3} xyz | 00 foot 5678))
+range: ['0','z']</pre> </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td>
+      <div>
+        <div id="plot_parallel_12" style="float:left;width:600px;height:400px"></div>
+        <div style="float:left;"> <ul id="plot_parallel_12_choices" style="list-style: none;" class="flot_choices"> </ul> </div>
+      </div>
+      <script type="text/javascript">
+        $(function () {
+          
+var data_12_rejit_amortised = [[8,8.51064e+06],[16,1.53846e+07],[32,2.83186e+07],[64,5.33333e+07],[128,1.03226e+08],[256,2.26549e+08],[512,4.41379e+08],[1024,7.64179e+08],[2048,6.16867e+08],[4096,2.05829e+09],[8192,3.09132e+09],[16384,3.66532e+09],[32768,4.4341e+09],[65536,4.67447e+09],[131072,5.02192e+09],[262144,3.41912e+09],[524288,4.95828e+09],[1048576,5.00609e+09],[2097152,5.00382e+09]];
+var data_12_rejit_worse = [[8,123552],[16,202224],[32,444013],[64,970285],[128,2.06452e+06],[256,4.27379e+06],[512,8.80482e+06],[1024,1.20357e+07],[2048,2.92321e+07],[4096,5.36126e+07],[8192,1.33464e+08],[16384,2.68458e+08],[32768,4.72706e+08],[65536,9.36764e+08],[131072,1.28653e+09],[262144,2.28967e+09],[524288,3.1284e+09],[1048576,3.84841e+09],[2097152,3.92924e+09]];
+var data_12_rejit_best = [[8,1.73913e+07],[16,3.07692e+07],[32,5.51724e+07],[64,9.55224e+07],[128,1.75342e+08],[256,4.12903e+08],[512,7.64179e+08],[1024,1.28e+09],[2048,9.57009e+08],[4096,3.0797e+09],[8192,3.79259e+09],[16384,4.15838e+09],[32768,4.78365e+09],[65536,4.84734e+09],[131072,5.122e+09],[262144,3.44111e+09],[524288,4.98373e+09],[1048576,5.01927e+09],[2097152,5.01064e+09]];
+var data_12_rejit_cst_amortised = [[8,4.93827e+06],[16,9.93789e+06],[32,2.06452e+07],[64,4.15584e+07],[128,8.15287e+07],[256,1.53293e+08],[512,3.26115e+08],[1024,5.88506e+08],[2048,1.10703e+09],[4096,2.1672e+09],[8192,3.81023e+09],[16384,5.38947e+09],[32768,8.55561e+09],[65536,1.06736e+10],[131072,1.20029e+10],[262144,1.24949e+10],[524288,1.23595e+10],[1048576,1.25578e+10],[2097152,1.25263e+10]];
+var data_12_rejit_cst_worse = [[8,73509.1],[16,139616],[32,252207],[64,593362],[128,1.17507e+06],[256,2.23288e+06],[512,4.5374e+06],[1024,8.84207e+06],[2048,1.87666e+07],[4096,2.98738e+07],[8192,7.34774e+07],[16384,1.46338e+08],[32768,2.99716e+08],[65536,5.66284e+08],[131072,1.06407e+09],[262144,1.98174e+09],[524288,3.42627e+09],[1048576,5.36219e+09],[2097152,6.12397e+09]];
+var data_12_rejit_cst_best = [[8,1.40351e+07],[16,2.75862e+07],[32,5.71429e+07],[64,1.12281e+08],[128,2.2069e+08],[256,4.12903e+08],[512,8.53333e+08],[1024,1.65161e+09],[2048,2.69474e+09],[4096,4.5011e+09],[8192,6.94237e+09],[16384,8.53333e+09],[32768,1.14975e+10],[65536,1.27254e+10],[131072,1.31863e+10],[262144,1.32396e+10],[524288,1.26731e+10],[1048576,1.27131e+10],[2097152,1.26069e+10]];
+          var datasets = [ 
+{data: data_12_rejit_amortised, label: "rejit amortised", color:"#DEBD00"},
+{data: data_12_rejit_worse, label: "rejit worse", color:"#E0D48D"},
+{data: data_12_rejit_best, label: "rejit best", color:"#E0D48D"},
+{data: data_12_rejit_cst_amortised, label: "rejit_cst amortised", color:"#277AD9"},
+{data: data_12_rejit_cst_worse, label: "rejit_cst worse", color:"#94B8E0"},
+{data: data_12_rejit_cst_best, label: "rejit_cst best", color:"#94B8E0"}, ];
+
+          var choiceContainer = $("#plot_parallel_12_choices");
+          $.each(datasets, function(key, val) {
+             choiceContainer.append('<li style="list-style: none;"><input type="checkbox" name="' + key +
+                                    '" checked="checked" id="id' + key + '">' +
+                                    '<label for="id' + key + '">'
+                                    + val.label + '</label></li>');
+          });
+
+          plot_according_to_choices("plot_parallel_12", datasets, choiceContainer);
+          $("#plot_parallel_12").bind("plothover", plothover_func);
+          function replot() { plot_according_to_choices("plot_parallel_12", datasets, choiceContainer); }
+          choiceContainer.find("input").change(replot);
+          $('.legendColorBox > div').each(function(i){
+                                          $(this).clone().prependTo(choiceContainer.find("li").eq(i));
+                                          });
+        });
+      </script>
+    </td>
+</table>
