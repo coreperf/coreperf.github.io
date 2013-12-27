@@ -2,7 +2,7 @@
 layout: post
 title:  "Recent side by side benchmarks of pcre, re2, rejit, and v8."
 date:   2013-12-22
-author: Alexandre rames
+author: Alexandre Rames
 categories: [update,rejit]
 ---
 
