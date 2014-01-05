@@ -22,6 +22,7 @@ architectures, help integrate Rejit into your projects, etc.
 * [Documentation][rejit documentation]
 * [Recent benchmarks][rejit benchmarks] of rejit and other engines
 * [Introduction to Rejit mechanisms][rejit intro]
+* [Bugs][rejit bugs]
 * [Contributing][rejit contributing]
 
 
@@ -30,5 +31,6 @@ architectures, help integrate Rejit into your projects, etc.
   [rejit documentation]: /projects/rejit/documentation.html
   [rejit benchmarks]: /projects/rejit/benchmarks.html
   [rejit intro]: /projects/rejit/introduction.html
-  [rejit contributing]: /projects/rejit/contributing.html
+  [rejit bugs]: /projects/rejit/bugs_contributing.html#bugs
+  [rejit contributing]: /projects/rejit/bugs_contributing.html#contributing
   [email alexandre]: mailto:alexandre@coreperf.com
