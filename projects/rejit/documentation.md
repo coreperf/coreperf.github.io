@@ -68,8 +68,8 @@ Use ```$ sample/<sample> --help``` for details.
 #### Rejit benchmark suite
 You can run the rejit benchmark suite with
 {% highlight sh %}
-$ ./tools/benchmarks/run.py
-$ <browser> ./html/rejit.html
+$ <rejit>/tools/benchmarks/run.py
+$ <browser> <rejit>/tools/benchmarks/benchmarks_results.html
 {% endhighlight %}
 As usual the ```--help``` switch will list the options available.
 
