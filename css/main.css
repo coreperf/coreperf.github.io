@@ -407,8 +407,9 @@ Blog
 *******************************************************************************/
 
 .blog_post_listing {
-  padding-bottom: 10px;
+  padding-bottom: 5px;
   background: url('/resources/images/bg_hr.png') repeat-x bottom;
+  margin-bottom: 15px;
 }
 
 /*******************************************************************************
