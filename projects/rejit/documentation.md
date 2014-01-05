@@ -11,6 +11,7 @@ project_github_url: https://github.com/coreperf/rejit
   * <a href="#rejit_benchmark_suite">Rejit benchmark suite</a>
   * <a href="#grep_benchmarks">Grep benchmarks</a>
   * <a href="#dna_matching_benchmarks">DNA matching benchmarks</a>
+* <a href="#syntax">Syntax</a>
 * <a href="#testing">Testing</a>
 * <a href="#disassembly_of_the_generated_code">Disassembly of the generated code</a>
 
@@ -110,6 +111,23 @@ $ ./sample/regexdna < input.file
 See the ```--help``` option for information on how to generate the input files.
 
 
+### Syntax
+
+Rejit currently follows the POSIX Extended Regular Expression syntax([Wikipedia link][wikipedia ERE]).
+Reintroducing the Basic Regular Expression syntax is part of the future tasks.
+
+Rejit supports the following elements of the ERE:
+
+- Parenthesis groups and alternations (```|```).
+- Repetitions using brackets ```{min,max}```, ```*```, ```+```, ```?```.
+- Anchors for start and end of lines (respectively ```^``` and ```$```).
+- The ```.``` character, matching everything except newlines characters.
+- Digits ```\d``` and non-digits ```\D```, equivalent respectively to
+  ```[0-9]``` and ```[^0-9]``` for the ASCII encoding.
+- Whitespace ```\s``` and non-whitespace ```\S```, equivalent respectively to ```[0-9]``` and ```[^0-9]``` for the ASCII
+  encoding.
+- Arbitrary hex encoding using the prefix ```\x```. (Eg. ```\x12``` matches the ASCII character encoded with the code ```0x12```.)
+
 ### Testing
 
 Rejit includes a test suite that can be run with ```tools/tests/run.py```.
@@ -142,4 +160,7 @@ $ cat disasm.regexp
 {% endhighlight %}
 
 
+
+
   [dna benchmark]: http://benchmarksgame.alioth.debian.org/
+  [wikipedia ERE]: http://en.wikipedia.org/wiki/Regular_expression#POSIX_extended
