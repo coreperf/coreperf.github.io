@@ -88,6 +88,10 @@ $ scons v8_engine
 The build script will take care of cloning the appropriate repositories and
 building everything. Files are located in ```tools/benchmarks/engines/<engine>```.
 
+Note that compilation of re2 currently fails on OSX10.9 (at least).
+[Here](http://code.google.com/p/re2/issues/detail?id=94) is a simple
+fix.
+
 #### Grep benchmarks
 Grep benchmarks are currently stil run manually. The rejit-powered grep utility
 is part of the sample programs.
