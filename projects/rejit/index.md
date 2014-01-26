@@ -6,14 +6,14 @@ project_github_url: https://github.com/coreperf/rejit
 ---
 
 Rejit is a prototype of a non-backtracking, just-in-time, SIMD-able regular
-expression compiler.
-<br />
+expression compiler developed on our free time.
 You can find the sources [on Github][rejit github].  It is available under the
 GPLv3 licence.
 
 We are looking for sponsors to help take this project further. We can focus
 effort on new features, specific use cases or optimisations, port to other
-architectures, help integrate Rejit into your projects, etc.
+architectures, help integrate Rejit into your projects, make it available under
+a different licence, etc.
 [Contact us][email alexandre] to discuss more.
 
 
