@@ -2,7 +2,7 @@
 layout: post
 title:  "LWN article about rejit and jrep"
 date:   2014-03-19
-author: Alexandre
+author: Alexandre Rames
 categories: technical
 ---
 
